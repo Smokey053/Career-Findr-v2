@@ -3,17 +3,24 @@ import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
-// Firebase configuration from your backend
+// Firebase configuration now sourced from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyBZidAMJf1B2Qh3-GI1bfPBg84E_iyQNGk",
-  authDomain: "career-findr.firebaseapp.com",
-  databaseURL: "https://career-findr-default-rtdb.firebaseio.com",
-  projectId: "career-findr",
-  storageBucket: "career-findr.firebasestorage.app",
-  messagingSenderId: "1015446452587",
-  appId: "1:1015446452587:web:bea0fc936ac4eccf53342e",
-  measurementId: "G-L9P1818ZKS",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+// Basic guard so missing env variables fail fast during development
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    "Firebase configuration is missing. Check your Vite environment variables."
+  );
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
