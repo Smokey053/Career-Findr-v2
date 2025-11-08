@@ -1,9 +1,11 @@
 # API Testing Guide
 
 ## Tools Needed
+
 - Postman, Insomnia, or Thunder Client (VS Code Extension)
 
 ## Base URL
+
 ```
 http://localhost:5000/api
 ```
@@ -11,6 +13,7 @@ http://localhost:5000/api
 ## Testing Workflow
 
 ### 1. Health Check
+
 ```http
 GET http://localhost:5000/health
 ```
@@ -18,6 +21,7 @@ GET http://localhost:5000/health
 ### 2. Register Users
 
 #### Register Jobseeker
+
 ```http
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -32,6 +36,7 @@ Content-Type: application/json
 ```
 
 #### Register Employer
+
 ```http
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -279,6 +284,7 @@ Authorization: Bearer YOUR_TOKEN_HERE
 ## Response Examples
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -294,6 +300,7 @@ Authorization: Bearer YOUR_TOKEN_HERE
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -326,6 +333,7 @@ You can import this as a Postman collection or use it as a reference for manual 
 ## Expected Results
 
 After completing the workflow:
+
 - 2 users created in Firestore (jobseeker & employer)
 - 1 job posting created
 - 1 job application submitted
@@ -335,20 +343,24 @@ After completing the workflow:
 ## Troubleshooting
 
 ### 401 Unauthorized
+
 - Check if token is included in Authorization header
 - Check if token is valid (not expired)
 - Format: `Bearer YOUR_TOKEN`
 
 ### 403 Forbidden
+
 - Check if user role has permission for this action
 - Example: Only employers can create jobs
 
 ### 400 Bad Request
+
 - Check request body format
 - Verify all required fields are included
 - Check validation rules (password strength, email format, etc.)
 
 ### 404 Not Found
+
 - Verify the endpoint URL is correct
 - Check if the resource ID exists
 

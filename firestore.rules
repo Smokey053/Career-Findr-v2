@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Users can update their own profile, admins can update any
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Institutions collection
+    match /institutions/{institutionId} {
+      // Anyone can read institutions (public directory)
+      allow read: if true;
+      
+      // Only authenticated users can create institutions
+      allow create: if isSignedIn();
+      
+      // Institution owners and admins can update
+      allow update: if isSignedIn() && 
+                      (resource.data.ownerId == request.auth.uid || isAdmin());
+      
+      // Only admins can delete institutions
+      allow delete: if isAdmin();
+    }
+    
+    // Companies collection
+    match /companies/{companyId} {
+      // Anyone can read companies (public directory)
+      allow read: if true;
+      
+      // Only authenticated users can create companies
+      allow create: if isSignedIn();
+      
+      // Company owners and admins can update
+      allow update: if isSignedIn() && 
+                      (resource.data.ownerId == request.auth.uid || isAdmin());
+      
+      // Only admins can delete companies
+      allow delete: if isAdmin();
+    }
+    
+    // Jobs collection
+    match /jobs/{jobId} {
+      // Anyone can read jobs (public listings)
+      allow read: if true;
+      
+      // Only authenticated companies/institutions can create jobs
+      allow create: if isSignedIn();
+      
+      // Job posters and admins can update
+      allow update: if isSignedIn() && 
+                      (resource.data.posterId == request.auth.uid || isAdmin());
+      
+      // Job posters and admins can delete
+      allow delete: if isSignedIn() && 
+                      (resource.data.posterId == request.auth.uid || isAdmin());
+    }
+    
+    // Applications collection
+    match /applications/{applicationId} {
+      // Users can read their own applications, job posters can read applications to their jobs
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || 
+                     resource.data.jobPosterId == request.auth.uid ||
+                     isAdmin());
+      
+      // Only authenticated users can create applications
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Applicants can update their own applications, job posters can update status
+      allow update: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || 
+                       resource.data.jobPosterId == request.auth.uid ||
+                       isAdmin());
+      
+      // Only applicants and admins can delete applications
+      allow delete: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // Courses collection
+    match /courses/{courseId} {
+      // Anyone can read courses
+      allow read: if true;
+      
+      // Only authenticated institutions can create courses
+      allow create: if isSignedIn();
+      
+      // Course owners and admins can update
+      allow update: if isSignedIn() && 
+                      (resource.data.institutionId == request.auth.uid || isAdmin());
+      
+      // Course owners and admins can delete
+      allow delete: if isSignedIn() && 
+                      (resource.data.institutionId == request.auth.uid || isAdmin());
+    }
+    
+    // Messages/Chat collection
+    match /messages/{messageId} {
+      // Users can read messages they're part of
+      allow read: if isSignedIn() && 
+                    (resource.data.senderId == request.auth.uid || 
+                     resource.data.receiverId == request.auth.uid ||
+                     isAdmin());
+      
+      // Users can send messages
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      
+      // Senders can update their own messages
+      allow update: if isSignedIn() && resource.data.senderId == request.auth.uid;
+      
+      // Senders and admins can delete messages
+      allow delete: if isSignedIn() && 
+                      (resource.data.senderId == request.auth.uid || isAdmin());
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // System can create notifications for users
+      allow create: if isSignedIn();
+      
+      // Users can update (mark as read) their own notifications
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

@@ -1,37 +1,30 @@
-import express from 'express';
+import express from "express";
 import {
-  register,
-  login,
-  getMe,
-  updateProfile,
-  changePassword,
-  forgotPassword,
+  registerUser,
+  loginUser,
   verifyEmail,
+  resendVerification,
+  getCurrentUser,
+  forgotPassword,
   logout,
-  deleteAccount,
-} from '../controllers/authController.js';
-import { verifyToken } from '../middleware/auth.js';
+} from "../controllers/authController.js";
+import { authenticateToken } from "../middleware/authMiddleware.js";
 import {
   validateRegistration,
   validateLogin,
-  validateProfileUpdate,
-  validateEmail,
-  validatePasswordReset,
-} from '../middleware/validation.js';
+} from "../middleware/validationMiddleware.js";
 
 const router = express.Router();
 
 // Public routes
-router.post('/register', validateRegistration, register);
-router.post('/login', validateLogin, login);
-router.post('/forgot-password', validateEmail, forgotPassword);
+router.post("/register", validateRegistration, registerUser);
+router.post("/login", validateLogin, loginUser);
+router.get("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerification);
+router.post("/forgot-password", forgotPassword);
 
 // Protected routes
-router.get('/me', verifyToken, getMe);
-router.put('/profile', verifyToken, validateProfileUpdate, updateProfile);
-router.put('/change-password', verifyToken, changePassword);
-router.post('/verify-email', verifyToken, verifyEmail);
-router.post('/logout', verifyToken, logout);
-router.delete('/account', verifyToken, deleteAccount);
+router.get("/me", authenticateToken, getCurrentUser);
+router.post("/logout", authenticateToken, logout);
 
 export default router;

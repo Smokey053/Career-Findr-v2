@@ -1,87 +1,100 @@
-/**
- * Custom Error Class
- */
-export class AppError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
-    this.isOperational = true;
-
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
-/**
- * Global Error Handler Middleware
- */
 export const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
-  error.statusCode = err.statusCode || 500;
+  console.error("Error Details:", {
+    message: err.message,
+    code: err.code,
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
 
-  // Log error for debugging
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', err);
+  // Firebase Auth errors
+  if (err.code === "auth/email-already-exists") {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Email already registered. Please use a different email or login.",
+    });
   }
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = new AppError(message, 404);
+  if (err.code === "auth/invalid-email") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid email address format.",
+    });
   }
 
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    const message = `${field} already exists`;
-    error = new AppError(message, 400);
+  if (err.code === "auth/weak-password") {
+    return res.status(400).json({
+      success: false,
+      message: "Password should be at least 6 characters long.",
+    });
   }
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message).join(', ');
-    error = new AppError(message, 400);
+  if (err.code === "auth/user-not-found") {
+    return res.status(404).json({
+      success: false,
+      message: "User not found.",
+    });
+  }
+
+  if (err.code === "auth/wrong-password") {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid credentials.",
+    });
+  }
+
+  // Firestore errors
+  if (err.code === "not-found" || err.code === 5) {
+    return res.status(404).json({
+      success: false,
+      message: "Resource not found.",
+    });
+  }
+
+  if (err.code === "already-exists" || err.code === 6) {
+    return res.status(409).json({
+      success: false,
+      message: "Resource already exists.",
+    });
+  }
+
+  if (err.code === "permission-denied" || err.code === 7) {
+    return res.status(403).json({
+      success: false,
+      message: "Permission denied.",
+    });
   }
 
   // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Invalid token. Please login again.';
-    error = new AppError(message, 401);
+  if (err.name === "JsonWebTokenError") {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid authentication token.",
+    });
   }
 
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expired. Please login again.';
-    error = new AppError(message, 401);
+  if (err.name === "TokenExpiredError") {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication token has expired. Please login again.",
+    });
   }
 
-  // Firebase errors
-  if (err.code && err.code.startsWith('auth/')) {
-    const message = err.message || 'Authentication error';
-    error = new AppError(message, 401);
+  // Validation errors
+  if (err.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed.",
+      errors: err.errors,
+    });
   }
 
-  // Send error response
-  res.status(error.statusCode || 500).json({
+  // Default error
+  res.status(err.status || 500).json({
     success: false,
-    error: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    message:
+      process.env.NODE_ENV === "production"
+        ? "An internal server error occurred. Please try again later."
+        : err.message,
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
-
-/**
- * Async handler wrapper to catch errors in async functions
- */
-export const asyncHandler = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
-
-/**
- * 404 Not Found Handler
- */
-export const notFound = (req, res, next) => {
-  const error = new AppError(`Route ${req.originalUrl} not found`, 404);
-  next(error);
-};
-
-export default { AppError, errorHandler, asyncHandler, notFound };
