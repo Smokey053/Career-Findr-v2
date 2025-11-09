@@ -1,3 +1,9 @@
+/**
+ * @file This file provides a comprehensive service for interacting with Firebase Storage.
+ * It includes functions for uploading, deleting, and retrieving files, with specific helpers
+ * for common use cases like resumes, profile images, and logos.
+ */
+
 import {
   ref,
   uploadBytes,
@@ -10,11 +16,16 @@ import {
 import { storage } from "../config/firebase";
 
 /**
- * Firebase Storage Service
- * Handles all file upload, download, and management operations
+ * A centralized object for Firebase Storage paths to ensure consistency.
+ * @property {string} RESUMES - Path for storing user resumes.
+ * @property {string} PROFILE_IMAGES - Path for user profile pictures.
+ * @property {string} COURSE_MATERIALS - Path for materials related to courses.
+ * @property {string} COMPANY_LOGOS - Path for company logos.
+ * @property {string} INSTITUTE_LOGOS - Path for institute logos.
+ * @property {string} JOB_ATTACHMENTS - Path for attachments to job postings.
+ * @property {string} CHAT_ATTACHMENTS - Path for files sent in chats.
+ * @property {string} DOCUMENTS - A general path for other documents.
  */
-
-// Storage paths
 export const STORAGE_PATHS = {
   RESUMES: "resumes",
   PROFILE_IMAGES: "profile-images",
@@ -29,10 +40,10 @@ export const STORAGE_PATHS = {
 /**
  * Upload a file to Firebase Storage
  * @param {File} file - The file to upload
- * @param {string} path - Storage path (use STORAGE_PATHS)
- * @param {string} userId - User ID for organizing files
- * @param {Function} onProgress - Progress callback (optional)
- * @returns {Promise<{url: string, path: string, name: string}>}
+ * @param {string} path - The storage path where files should be uploaded.
+ * @param {string} userId - User ID for organizing files.
+ * @param {Function} [onProgress=null] - Optional callback for tracking upload progress.
+ * @returns {Promise<{url: string, path: string, name: string, size: number, type: string}>} An object containing the file's URL and metadata.
  */
 export const uploadFile = async (file, path, userId, onProgress = null) => {
   if (!file) throw new Error("No file provided");
@@ -95,10 +106,10 @@ export const uploadFile = async (file, path, userId, onProgress = null) => {
 /**
  * Upload multiple files
  * @param {FileList} files - Files to upload
- * @param {string} path - Storage path
- * @param {string} userId - User ID
- * @param {Function} onProgress - Progress callback (optional)
- * @returns {Promise<Array>}
+ * @param {string} path - The storage path where files should be uploaded.
+ * @param {string} userId - The ID of the user uploading the files.
+ * @param {Function} [onProgress=null] - Optional callback for tracking total upload progress.
+ * @returns {Promise<Array<{url: string, path: string, name: string, size: number, type: string}>>} An array of objects for each uploaded file.
  */
 export const uploadMultipleFiles = async (
   files,
@@ -122,8 +133,8 @@ export const uploadMultipleFiles = async (
 
 /**
  * Delete a file from Firebase Storage
- * @param {string} filePath - Full path to the file in storage
- * @returns {Promise<void>}
+ * @param {string} filePath - The full path to the file in Firebase Storage.
+ * @returns {Promise<void>} A promise that resolves when the file is deleted.
  */
 export const deleteFile = async (filePath) => {
   if (!filePath) throw new Error("No file path provided");
@@ -140,8 +151,8 @@ export const deleteFile = async (filePath) => {
 
 /**
  * Get file download URL from storage path
- * @param {string} filePath - Full path to the file in storage
- * @returns {Promise<string>}
+ * @param {string} filePath - The full path to the file in Firebase Storage.
+ * @returns {Promise<string>} A promise that resolves with the public download URL.
  */
 export const getFileURL = async (filePath) => {
   if (!filePath) throw new Error("No file path provided");
@@ -157,8 +168,8 @@ export const getFileURL = async (filePath) => {
 
 /**
  * Get file metadata
- * @param {string} filePath - Full path to the file in storage
- * @returns {Promise<Object>}
+ * @param {string} filePath - The full path to the file in Firebase Storage.
+ * @returns {Promise<import("firebase/storage").FullMetadata>} A promise that resolves with the file's metadata.
  */
 export const getFileMetadata = async (filePath) => {
   if (!filePath) throw new Error("No file path provided");
@@ -174,9 +185,9 @@ export const getFileMetadata = async (filePath) => {
 
 /**
  * List all files in a directory
- * @param {string} path - Directory path
- * @param {string} userId - User ID (optional)
- * @returns {Promise<Array>}
+ * @param {string} path - The directory path in Firebase Storage.
+ * @param {string} [userId=null] - Optional user ID to scope the listing to a user-specific folder.
+ * @returns {Promise<Array<object>>} A promise that resolves with an array of file metadata objects.
  */
 export const listFiles = async (path, userId = null) => {
   const dirPath = userId ? `${path}/${userId}` : path;
@@ -207,10 +218,10 @@ export const listFiles = async (path, userId = null) => {
 
 /**
  * Upload profile image with automatic resizing
- * @param {File} file - Image file
- * @param {string} userId - User ID
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<{url: string, path: string}>}
+ * @param {File} file - The image file to upload.
+ * @param {string} userId - The ID of the user.
+ * @param {Function} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<object>} The uploaded file's metadata.
  */
 export const uploadProfileImage = async (file, userId, onProgress = null) => {
   // Validate file type
@@ -229,10 +240,10 @@ export const uploadProfileImage = async (file, userId, onProgress = null) => {
 
 /**
  * Upload resume/CV
- * @param {File} file - Resume file (PDF)
- * @param {string} userId - User ID
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<{url: string, path: string}>}
+ * @param {File} file - The resume file (PDF or Word document).
+ * @param {string} userId - The ID of the user.
+ * @param {Function} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<object>} The uploaded file's metadata.
  */
 export const uploadResume = async (file, userId, onProgress = null) => {
   // Validate file type
@@ -256,11 +267,11 @@ export const uploadResume = async (file, userId, onProgress = null) => {
 
 /**
  * Upload course material
- * @param {File} file - Course material file
- * @param {string} courseId - Course ID
- * @param {string} userId - User ID
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<{url: string, path: string}>}
+ * @param {File} file - The course material file.
+ * @param {string} courseId - The ID of the course.
+ * @param {string} userId - The ID of the user uploading the material.
+ * @param {Function} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<object>} The uploaded file's metadata.
  */
 export const uploadCourseMaterial = async (
   file,
@@ -274,11 +285,11 @@ export const uploadCourseMaterial = async (
 
 /**
  * Upload company/institute logo
- * @param {File} file - Logo image file
- * @param {string} entityId - Company or Institute ID
- * @param {string} type - 'company' or 'institute'
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<{url: string, path: string}>}
+ * @param {File} file - The logo image file.
+ * @param {string} entityId - The ID of the company or institute.
+ * @param {string} [type="company"] - The type of entity ('company' or 'institute').
+ * @param {Function} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<object>} The uploaded file's metadata.
  */
 export const uploadLogo = async (
   file,
@@ -306,11 +317,11 @@ export const uploadLogo = async (
 
 /**
  * Upload chat attachment
- * @param {File} file - Attachment file
- * @param {string} chatId - Chat ID
- * @param {string} userId - User ID
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<{url: string, path: string}>}
+ * @param {File} file - The attachment file.
+ * @param {string} chatId - The ID of the chat.
+ * @param {string} userId - The ID of the user sending the attachment.
+ * @param {Function} [onProgress=null] - Optional progress callback.
+ * @returns {Promise<object>} The uploaded file's metadata.
  */
 export const uploadChatAttachment = async (
   file,
@@ -329,9 +340,9 @@ export const uploadChatAttachment = async (
 };
 
 /**
- * Format file size for display
- * @param {number} bytes - File size in bytes
- * @returns {string} Formatted size
+ * Formats a file size in bytes into a human-readable string (KB, MB, GB).
+ * @param {number} bytes - The file size in bytes.
+ * @returns {string} The formatted file size string.
  */
 export const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -342,19 +353,19 @@ export const formatFileSize = (bytes) => {
 };
 
 /**
- * Get file extension from filename
- * @param {string} filename - Filename
- * @returns {string} Extension
+ * Extracts the file extension from a filename.
+ * @param {string} filename - The full name of the file.
+ * @returns {string} The file extension.
  */
 export const getFileExtension = (filename) => {
   return filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
 };
 
 /**
- * Validate file type
- * @param {File} file - File to validate
- * @param {Array<string>} allowedTypes - Allowed MIME types
- * @returns {boolean}
+ * Validates if a file's MIME type is in a list of allowed types.
+ * @param {File} file - The file to validate.
+ * @param {Array<string>} allowedTypes - An array of allowed MIME types (e.g., ['image/jpeg', 'image/png']).
+ * @returns {boolean} True if the file type is allowed, false otherwise.
  */
 export const validateFileType = (file, allowedTypes) => {
   return allowedTypes.includes(file.type);

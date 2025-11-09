@@ -1,3 +1,10 @@
+/**
+ * @file AdminDashboard component.
+ * This component serves as the main dashboard for administrators, providing an overview of platform statistics,
+ * pending approvals for institutions and companies, and quick access to user management functionalities.
+ * It uses React Query for data fetching and mutations to handle user approvals and rejections.
+ */
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -33,7 +40,6 @@ import {
   Assignment,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminAPI } from "../../services/api";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { useAuth } from "../../contexts/AuthContext";
@@ -44,6 +50,10 @@ import {
   rejectUser,
 } from "../../services/userService";
 
+/**
+ * Renders the main administrative dashboard.
+ * Features include statistical cards, platform metrics, and tabs for managing pending user approvals.
+ */
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -60,25 +70,38 @@ export default function AdminDashboard() {
     type: null,
   });
 
-  // Fetch data
+  /**
+   * Fetches platform-wide statistics using React Query.
+   * @queryKey ['adminStats']
+   */
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["adminStats"],
     queryFn: getPlatformStats,
   });
 
+  /**
+   * Fetches users with a 'pending' status for approval.
+   * @queryKey ['pendingUsers']
+   */
   const { data: pendingUsers, isLoading: usersLoading } = useQuery({
     queryKey: ["pendingUsers"],
     queryFn: () => getUsers({ status: "pending" }),
   });
 
+  /**
+   * Fetches all users for display in the total users stat.
+   * @queryKey ['allUsers']
+   */
   const { data: allUsers } = useQuery({
     queryKey: ["allUsers"],
     queryFn: () => getUsers(),
   });
 
-  // Approve user mutation
+  /**
+   * Mutation for approving a user. Invalidates relevant queries on success.
+   */
   const approveMutation = useMutation({
-    mutationFn: ({ userId, type }) => approveUser(userId),
+    mutationFn: ({ userId }) => approveUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries(["pendingUsers"]);
       queryClient.invalidateQueries(["allUsers"]);
@@ -87,9 +110,11 @@ export default function AdminDashboard() {
     },
   });
 
-  // Reject user mutation
+  /**
+   * Mutation for rejecting a user. Invalidates relevant queries on success.
+   */
   const rejectMutation = useMutation({
-    mutationFn: ({ userId, type }) => rejectUser(userId),
+    mutationFn: ({ userId }) => rejectUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries(["pendingUsers"]);
       queryClient.invalidateQueries(["allUsers"]);
@@ -106,6 +131,7 @@ export default function AdminDashboard() {
   const pendingCompanies =
     pendingUsers?.filter((u) => u.role === "company") || [];
 
+  // Data for the main statistics cards at the top of the dashboard.
   const dashboardStats = [
     {
       title: "Total Users",
@@ -137,10 +163,20 @@ export default function AdminDashboard() {
     },
   ];
 
+  /**
+   * Opens the confirmation dialog for approving a user.
+   * @param {string} userId - The ID of the user to approve.
+   * @param {string} type - The role of the user (e.g., 'institute', 'company').
+   */
   const handleApprove = (userId, type) => {
     setApproveDialog({ open: true, id: userId, type });
   };
 
+  /**
+   * Opens the confirmation dialog for rejecting a user.
+   * @param {string} userId - The ID of the user to reject.
+   * @param {string} type - The role of the user.
+   */
   const handleReject = (userId, type) => {
     setRejectDialog({ open: true, id: userId, type });
   };

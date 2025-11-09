@@ -13,6 +13,11 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 
 const AuthContext = createContext(null);
 
+/**
+ * Custom hook to access the authentication context.
+ * Provides user data, loading state, and auth functions.
+ * @returns {object} The authentication context value.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -21,12 +26,19 @@ export const useAuth = () => {
   return context;
 };
 
+/**
+ * Provides authentication state and functions to its children components.
+ * Manages user session and interfaces with Firebase Authentication.
+ */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Listen to Firebase auth state changes
+  /**
+   * Effect to subscribe to Firebase auth state changes.
+   * Fetches user profile from Firestore upon successful authentication.
+   */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -55,6 +67,11 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  /**
+   * Registers a new user with email and password.
+   * @param {object} userData - The user's registration data.
+   * @returns {Promise<{user: object}>} The newly created user object.
+   */
   const register = async (userData) => {
     setError(null);
     try {
@@ -90,6 +107,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Logs in a user with email and password.
+   * @param {object} credentials - The user's login credentials.
+   * @returns {Promise<{user: object}>} The logged-in user object.
+   */
   const login = async (credentials) => {
     setError(null);
     try {
@@ -119,6 +141,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Logs out the current user.
+   * @returns {Promise<void>}
+   */
   const logout = async () => {
     try {
       await signOut(auth);
@@ -130,6 +156,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Signs in or registers a user with a Google account.
+   * @param {string} [defaultRole="student"] - The role to assign if it's a new user.
+   * @returns {Promise<{user: object, isNewUser: boolean}>} The user object and a flag for new users.
+   */
   const signInWithGoogle = async (defaultRole = "student") => {
     setError(null);
     try {
