@@ -16,6 +16,14 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    function isInstitution(institutionId) {
+      return isSignedIn() && request.auth.uid == institutionId;
+    }
+    
+    function isCompany(companyId) {
+      return isSignedIn() && request.auth.uid == companyId;
+    }
+    
     // Users collection
     match /users/{userId} {
       // Users can read their own data, admins can read all
@@ -63,45 +71,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // Jobs collection
-    match /jobs/{jobId} {
-      // Anyone can read jobs (public listings)
-      allow read: if true;
-      
-      // Only authenticated companies/institutions can create jobs
-      allow create: if isSignedIn();
-      
-      // Job posters and admins can update
-      allow update: if isSignedIn() && 
-                      (resource.data.posterId == request.auth.uid || isAdmin());
-      
-      // Job posters and admins can delete
-      allow delete: if isSignedIn() && 
-                      (resource.data.posterId == request.auth.uid || isAdmin());
-    }
-    
-    // Applications collection
-    match /applications/{applicationId} {
-      // Users can read their own applications, job posters can read applications to their jobs
-      allow read: if isSignedIn() && 
-                    (resource.data.userId == request.auth.uid || 
-                     resource.data.jobPosterId == request.auth.uid ||
-                     isAdmin());
-      
-      // Only authenticated users can create applications
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      
-      // Applicants can update their own applications, job posters can update status
-      allow update: if isSignedIn() && 
-                      (resource.data.userId == request.auth.uid || 
-                       resource.data.jobPosterId == request.auth.uid ||
-                       isAdmin());
-      
-      // Only applicants and admins can delete applications
-      allow delete: if isSignedIn() && 
-                      (resource.data.userId == request.auth.uid || isAdmin());
-    }
-    
     // Courses collection
     match /courses/{courseId} {
       // Anyone can read courses
@@ -115,6 +84,70 @@ service cloud.firestore {
                       (resource.data.institutionId == request.auth.uid || isAdmin());
       
       // Course owners and admins can delete
+      allow delete: if isSignedIn() && 
+                      (resource.data.institutionId == request.auth.uid || isAdmin());
+    }
+    
+    // Jobs collection
+    match /jobs/{jobId} {
+      // Anyone can read jobs (public listings)
+      allow read: if true;
+      
+      // Only authenticated companies/institutions can create jobs
+      allow create: if isSignedIn();
+      
+      // Job posters and admins can update
+      allow update: if isSignedIn() && 
+                      (resource.data.companyId == request.auth.uid || isAdmin());
+      
+      // Job posters and admins can delete
+      allow delete: if isSignedIn() && 
+                      (resource.data.companyId == request.auth.uid || isAdmin());
+    }
+    
+    // Applications collection
+    match /applications/{applicationId} {
+      // Users can read their own applications, job/course posters can read applications to their items
+      allow read: if isSignedIn() && 
+                    (resource.data.studentId == request.auth.uid || 
+                     resource.data.institutionId == request.auth.uid ||
+                     resource.data.companyId == request.auth.uid ||
+                     isAdmin());
+      
+      // Only authenticated users can create applications
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      
+      // Applicants can update their own applications, job/course posters can update status
+      allow update: if isSignedIn() && 
+                      (resource.data.studentId == request.auth.uid || 
+                       resource.data.institutionId == request.auth.uid ||
+                       resource.data.companyId == request.auth.uid ||
+                       isAdmin());
+      
+      // Only applicants and admins can delete applications
+      allow delete: if isSignedIn() && 
+                      (resource.data.studentId == request.auth.uid || isAdmin());
+    }
+    
+    // Admissions collection
+    match /admissions/{admissionId} {
+      // Students can read their own admissions, institutions can read applications to their courses
+      allow read: if isSignedIn() && 
+                    (resource.data.studentId == request.auth.uid || 
+                     resource.data.institutionId == request.auth.uid ||
+                     isAdmin());
+      
+      // Institutions and admins can create admissions
+      allow create: if isSignedIn() && 
+                      (resource.data.institutionId == request.auth.uid || isAdmin());
+      
+      // Students can update (accept/decline), institutions can delete
+      allow update: if isSignedIn() && 
+                      (resource.data.studentId == request.auth.uid || 
+                       resource.data.institutionId == request.auth.uid ||
+                       isAdmin());
+      
+      // Only institutions and admins can delete
       allow delete: if isSignedIn() && 
                       (resource.data.institutionId == request.auth.uid || isAdmin());
     }
@@ -140,8 +173,9 @@ service cloud.firestore {
     
     // Notifications collection
     match /notifications/{notificationId} {
-      // Users can read their own notifications
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can read their own notifications, admins can read all
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
       
       // System can create notifications for users
       allow create: if isSignedIn();
@@ -149,8 +183,23 @@ service cloud.firestore {
       // Users can update (mark as read) their own notifications
       allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
       
-      // Users can delete their own notifications
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can delete their own notifications, admins can delete any
+      allow delete: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // Saved Items collection
+    match /savedItems/{saveId} {
+      // Users can read their own saved items
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create their own saved items
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own saved items
+      allow delete: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }
