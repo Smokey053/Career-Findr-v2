@@ -1,9 +1,9 @@
 /**
  * Firebase Database Seed Script
  * This script populates the Firestore database with demo data for testing and presentation
- * 
+ *
  * Usage: node scripts/seedDatabase.js
- * 
+ *
  * Requirements:
  * - Firebase Admin SDK initialized with service account key
  * - serviceAccountKey.json in the root directory
@@ -245,7 +245,8 @@ const demoData = {
       field: "Medicine",
       level: "Undergraduate",
       duration: "4 years",
-      description: "Professional nursing program with clinical practice and community health focus.",
+      description:
+        "Professional nursing program with clinical practice and community health focus.",
       location: "Maseru",
       tuition: 95000,
       startDate: new Date("2024-09-01"),
@@ -458,7 +459,9 @@ async function createAuthUser(userData) {
     return authUser;
   } catch (error) {
     if (error.code === "auth/uid-already-exists") {
-      console.log(`⚠️  User ${userData.email} already exists, skipping auth creation`);
+      console.log(
+        `⚠️  User ${userData.email} already exists, skipping auth creation`
+      );
       return null;
     }
     throw error;
@@ -533,7 +536,9 @@ async function seedInstitutions() {
     }
   }
 
-  console.log(`✅ ${counter}/${demoData.institutions.length} institutions created`);
+  console.log(
+    `✅ ${counter}/${demoData.institutions.length} institutions created`
+  );
 }
 
 async function seedCompanies() {
@@ -643,7 +648,9 @@ async function seedApplications() {
     }
   }
 
-  console.log(`✅ ${counter}/${demoData.applications.length} applications created`);
+  console.log(
+    `✅ ${counter}/${demoData.applications.length} applications created`
+  );
 }
 
 async function seedAdmissions() {

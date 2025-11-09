@@ -1,45 +1,54 @@
 # Database Seeding Script
 
 ## Overview
+
 This script populates the Firebase Firestore database with comprehensive demo data for testing and presentation purposes.
 
 ## Demo Data Included
 
 ### 1. Admin Account
+
 - **Email:** admin@careerfinder.com
 - **Password:** Admin@123456
 - **Role:** Admin with full system privileges
 
 ### 2. Student Accounts (3)
+
 - John Doe - Skills: JavaScript, React, Node.js
 - Jane Smith - Skills: Python, Data Analysis, SQL
 - Peter Wilson - Skills: Java, Android, Firebase
 
 ### 3. Institutions (2)
+
 - National University of Lesotho (Maseru)
 - Lesotho Technical Institute of Education (Leribe)
 
 ### 4. Companies (2)
+
 - Tech Corporation Lesotho (Technology)
 - Finance Pro Services (Finance)
 
 ### 5. Courses (4)
+
 - Bachelor of Science in Computer Science (NUL)
 - Master of Business Administration (NUL)
 - Diploma in Electrical Engineering (LETIE)
 - Bachelor of Science in Nursing (NUL)
 
 ### 6. Job Listings (4)
+
 - Senior Full Stack Developer (Tech Corp)
 - Junior Software Developer (Tech Corp)
 - Financial Analyst (Finance Pro)
 - Accounting Clerk (Finance Pro)
 
 ### 7. Applications & Admissions
+
 - Various course and job applications in different statuses
 - Admission records for approved applications
 
 ## Prerequisites
+
 - Node.js installed
 - Firebase Admin SDK
 - serviceAccountKey.json in the root directory
@@ -55,11 +64,13 @@ npm install firebase-admin
 ## Usage
 
 ### Method 1: Direct Execution
+
 ```bash
 node scripts/seedDatabase.js
 ```
 
 ### Method 2: Using npm script (add to package.json)
+
 ```json
 {
   "scripts": {
@@ -69,6 +80,7 @@ node scripts/seedDatabase.js
 ```
 
 Then run:
+
 ```bash
 npm run seed
 ```
@@ -76,6 +88,7 @@ npm run seed
 ## What Gets Created
 
 The script will:
+
 1. Create admin user account
 2. Create 3 student accounts with profiles
 3. Create 2 institution accounts
@@ -86,7 +99,9 @@ The script will:
 8. Create admission records
 
 ## Output
+
 After successful execution, you'll see:
+
 - Confirmation of each data type created
 - List of all demo account credentials
 - Total counts of created records
@@ -94,15 +109,19 @@ After successful execution, you'll see:
 ## Important Notes
 
 ⚠️ **Warning:** This script will:
+
 - Create new users in Firebase Authentication
 - Create documents in Firestore
 - Skip users that already exist to prevent duplicates
 
 ### Development Environment
+
 If using the Firebase Emulator, ensure it's running before executing the script.
 
 ### Admin Privileges
+
 The admin account created by this script has full access to:
+
 - All user records
 - All courses and job listings
 - All applications and admissions
@@ -111,28 +130,34 @@ The admin account created by this script has full access to:
 ## Troubleshooting
 
 ### Error: "Firebase configuration is missing"
+
 - Ensure `serviceAccountKey.json` exists in the root directory
 
 ### Error: "uid-already-exists"
+
 - The user already exists in Firebase Auth
 - Script will skip and continue with others
 
 ### Error: "Permission denied"
+
 - Verify Firestore rules allow the operations
 - Check that the service account has proper permissions
 
 ## Testing After Seeding
 
 1. **Login as Admin:**
+
    - Email: admin@careerfinder.com
    - Password: Admin@123456
    - Access: Full admin dashboard
 
 2. **Login as Student:**
+
    - Use any student email listed in output
    - Access: Course search, job board, applications
 
 3. **Login as Institution:**
+
    - Use any institution email listed in output
    - Access: Course management, applications review
 
@@ -194,4 +219,5 @@ admissions/
 ```
 
 ## Support
+
 For issues or questions about the seeding script, refer to the main project documentation.

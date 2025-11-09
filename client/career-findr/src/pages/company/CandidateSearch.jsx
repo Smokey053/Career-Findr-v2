@@ -335,7 +335,8 @@ export default function CandidateSearch() {
         {/* Results Count */}
         <Box mb={3}>
           <Typography variant="body2" color="text.secondary">
-            {data?.total || 0} candidate{data?.total !== 1 ? "s" : ""} found
+            {candidates.length} candidate{candidates.length !== 1 ? "s" : ""}{" "}
+            found
           </Typography>
         </Box>
 

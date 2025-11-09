@@ -365,7 +365,7 @@ export default function JobBoard() {
         {/* Results Count */}
         <Box mb={3}>
           <Typography variant="body2" color="text.secondary">
-            {data?.total || 0} job{data?.total !== 1 ? "s" : ""} found
+            {jobs.length} job{jobs.length !== 1 ? "s" : ""} found
           </Typography>
         </Box>
 
