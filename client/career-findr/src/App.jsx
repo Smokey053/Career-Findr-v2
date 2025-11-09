@@ -49,6 +49,8 @@ import SavedItems from "./pages/common/SavedItems";
 import Messages from "./pages/common/Messages";
 import Notifications from "./pages/common/Notifications";
 import CalendarPage from "./pages/common/CalendarPage";
+import Profile from "./pages/common/Profile";
+import Settings from "./pages/common/Settings";
 
 // Create Query Client
 const queryClient = new QueryClient({
@@ -323,6 +325,40 @@ function App() {
                         >
                           <Navbar />
                           <CalendarPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Profile and Settings Routes */}
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute
+                          allowedRoles={[
+                            "student",
+                            "institute",
+                            "company",
+                            "admin",
+                          ]}
+                        >
+                          <Navbar />
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/settings"
+                      element={
+                        <ProtectedRoute
+                          allowedRoles={[
+                            "student",
+                            "institute",
+                            "company",
+                            "admin",
+                          ]}
+                        >
+                          <Navbar />
+                          <Settings />
                         </ProtectedRoute>
                       }
                     />
