@@ -417,9 +417,13 @@ export default function Landing() {
                 <Zoom in timeout={800 + index * 200}>
                   <Card
                     sx={{
+                      minHeight: 280,
                       height: "100%",
                       textAlign: "center",
                       p: { xs: 2, sm: 3 },
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
                       transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                       "&:hover": {
                         transform: "translateY(-12px)",
@@ -434,7 +438,15 @@ export default function Landing() {
                       },
                     }}
                   >
-                    <CardContent>
+                    <CardContent
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 2,
+                        height: "100%",
+                      }}
+                    >
                       <Box
                         className="feature-icon"
                         sx={{
@@ -464,7 +476,10 @@ export default function Landing() {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+                        sx={{
+                          fontSize: { xs: "0.875rem", sm: "1rem" },
+                          flexGrow: 1,
+                        }}
                       >
                         {feature.description}
                       </Typography>
@@ -657,7 +672,7 @@ export default function Landing() {
                 color="text.secondary"
                 sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
               >
-                Phone: +266 123 4567
+                Phone: +266 59462735
               </Typography>
             </Grid>
           </Grid>

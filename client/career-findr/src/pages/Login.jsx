@@ -134,24 +134,6 @@ export default function Login() {
             </Typography>
           </Box>
 
-          {/* Demo Credentials Section */}
-          <Alert
-            severity="info"
-            sx={{
-              mb: 3,
-              textAlign: "left",
-            }}
-          >
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-              🔑 Demo Admin Credentials
-            </Typography>
-            <Typography variant="body2" component="div">
-              <strong>Email:</strong> admin@careerfindr.com
-              <br />
-              <strong>Password:</strong> admin123
-            </Typography>
-          </Alert>
-
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
