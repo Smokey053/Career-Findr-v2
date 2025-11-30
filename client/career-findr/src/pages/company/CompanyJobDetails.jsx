@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -9,18 +9,12 @@ import {
   Box,
   Grid,
   Chip,
-  Divider,
   Card,
   CardContent,
   Alert,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Fade,
   Zoom,
   Grow,
-  Tooltip,
 } from "@mui/material";
 import {
   WorkRounded,
@@ -28,26 +22,19 @@ import {
   AttachMoneyRounded,
   ScheduleRounded,
   CheckCircleRounded,
-  ArrowBack,
   ArrowBackRounded,
-  BookmarkBorderRounded,
-  BookmarkRounded,
   BusinessRounded,
   CalendarTodayRounded,
   StarRounded,
   CardGiftcardRounded,
   AssignmentRounded,
   InfoRounded,
+  EditRounded,
+  PeopleRounded,
 } from "@mui/icons-material";
 import { getJob } from "../../services/jobService";
-import {
-  saveItem,
-  unsaveItem,
-  checkIfSaved,
-} from "../../services/savedItemsService";
-import { useAuth } from "../../contexts/AuthContext";
-import LoadingScreen from "../../components/common/LoadingScreen";
 import { formatDate } from "../../utils/dateUtils";
+import LoadingScreen from "../../components/common/LoadingScreen";
 
 const normalizeSalaryValue = (value) => {
   if (value === undefined || value === null || value === "") {
@@ -83,11 +70,9 @@ const getSalaryDisplay = (job) =>
   job?.salary ||
   "Competitive";
 
-export default function JobDetails() {
+export default function CompanyJobDetails() {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch job details
   const { data: job, isLoading } = useQuery({
@@ -95,49 +80,6 @@ export default function JobDetails() {
     queryFn: () => getJob(jobId),
     enabled: !!jobId,
   });
-
-  // Check if job is saved
-  const { data: isSaved, refetch: refetchSavedStatus } = useQuery({
-    queryKey: ["savedJob", jobId],
-    queryFn: () => checkIfSaved(user?.uid, jobId, "job"),
-    enabled: !!user?.uid && !!jobId,
-  });
-
-  const handleSave = async () => {
-    if (isSaving || !job) return;
-    setIsSaving(true);
-    try {
-      if (isSaved) {
-        await unsaveItem(user.uid, jobId, "job");
-      } else {
-        await saveItem(user.uid, {
-          itemId: jobId,
-          itemType: "job",
-          itemData: {
-            title: job.title,
-            companyName: job.companyName,
-            company: job.companyName,
-            location: job.location,
-            type: job.type,
-            experienceLevel: job.experienceLevel,
-            salary: getSalaryDisplay(job),
-            salaryMin: job.salaryMin ?? null,
-            salaryMax: job.salaryMax ?? null,
-            currency: job.currency || "LSL",
-          },
-        });
-      }
-      await refetchSavedStatus();
-    } catch (error) {
-      console.error("Error saving/unsaving job:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleApply = () => {
-    navigate(`/jobs/${jobId}/apply`);
-  };
 
   if (isLoading) {
     return <LoadingScreen message="Loading job details..." />;
@@ -148,8 +90,8 @@ export default function JobDetails() {
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Alert severity="error">Job not found</Alert>
         <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate("/jobs")}
+          startIcon={<ArrowBackRounded />}
+          onClick={() => navigate("/company/jobs")}
           sx={{ mt: 2 }}
         >
           Back to Jobs
@@ -162,20 +104,39 @@ export default function JobDetails() {
     <Box className="min-vh-100" bgcolor="background.default">
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Fade in timeout={600}>
-          <Button
-            startIcon={<ArrowBackRounded />}
-            onClick={() => navigate("/jobs")}
-            sx={{
-              mb: 3,
-              borderRadius: 2,
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                transform: "translateX(-4px)",
-              },
-            }}
-          >
-            Back to Jobs
-          </Button>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Button
+              startIcon={<ArrowBackRounded />}
+              onClick={() => navigate("/company/jobs")}
+              sx={{
+                borderRadius: 2,
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:hover": {
+                  transform: "translateX(-4px)",
+                },
+              }}
+            >
+              Back to Jobs
+            </Button>
+            <Box display="flex" gap={2}>
+              <Button
+                variant="outlined"
+                startIcon={<PeopleRounded />}
+                onClick={() => navigate(`/company/jobs/${jobId}/applicants`)}
+                sx={{ borderRadius: 2 }}
+              >
+                View Applicants
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<EditRounded />}
+                onClick={() => navigate(`/company/jobs/edit/${jobId}`)}
+                sx={{ borderRadius: 2 }}
+              >
+                Edit Job
+              </Button>
+            </Box>
+          </Box>
         </Fade>
 
         <Zoom in timeout={800}>
@@ -210,112 +171,48 @@ export default function JobDetails() {
                 },
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexWrap: "wrap",
-                  gap: 2,
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 280 }}>
-                  <Typography variant="h4" gutterBottom fontWeight={700}>
-                    {job.title}
-                  </Typography>
-                  <Box
+              <Box sx={{ position: "relative", zIndex: 1 }}>
+                <Typography variant="h4" gutterBottom fontWeight={700}>
+                  {job.title}
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 2,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Chip
+                    icon={<BusinessRounded sx={{ color: "white !important" }} />}
+                    label={job.companyName || "Your Company"}
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
-                      mb: 2,
-                      flexWrap: "wrap",
+                      bgcolor: "rgba(255,255,255,0.2)",
+                      color: "white",
+                      fontWeight: 500,
+                      "& .MuiChip-icon": { color: "white" },
                     }}
-                  >
-                    <Chip
-                      icon={
-                        <BusinessRounded sx={{ color: "white !important" }} />
-                      }
-                      label={job.companyName || "Company"}
-                      sx={{
-                        bgcolor: "rgba(255,255,255,0.2)",
-                        color: "white",
-                        fontWeight: 500,
-                        "& .MuiChip-icon": { color: "white" },
-                      }}
-                    />
-                    <Chip
-                      label={job.type || "Full-time"}
-                      sx={{
-                        bgcolor: "rgba(255,255,255,0.2)",
-                        color: "white",
-                        fontWeight: 500,
-                      }}
-                    />
-                    <Chip
-                      label={job.status === "active" ? "Open" : "Closed"}
-                      sx={{
-                        bgcolor:
-                          job.status === "active"
-                            ? "rgba(16, 185, 129, 0.8)"
-                            : "rgba(239, 68, 68, 0.8)",
-                        color: "white",
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
-                </Box>
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  <Tooltip title={isSaved ? "Unsave job" : "Save job"} arrow>
-                    <Button
-                      variant="outlined"
-                      startIcon={
-                        isSaved ? (
-                          <BookmarkRounded />
-                        ) : (
-                          <BookmarkBorderRounded />
-                        )
-                      }
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      sx={{
-                        borderColor: "white",
-                        color: "white",
-                        borderRadius: 2,
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        "&:hover": {
-                          borderColor: "white",
-                          bgcolor: "rgba(255,255,255,0.1)",
-                          transform: "scale(1.05)",
-                        },
-                      }}
-                    >
-                      {isSaved ? "Saved" : "Save"}
-                    </Button>
-                  </Tooltip>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={handleApply}
-                    disabled={job.status !== "active"}
+                  />
+                  <Chip
+                    label={job.type || "Full-time"}
                     sx={{
-                      bgcolor: "white",
-                      color: "#2563EB",
+                      bgcolor: "rgba(255,255,255,0.2)",
+                      color: "white",
+                      fontWeight: 500,
+                    }}
+                  />
+                  <Chip
+                    label={job.status === "active" ? "Active" : "Closed"}
+                    sx={{
+                      bgcolor:
+                        job.status === "active"
+                          ? "rgba(16, 185, 129, 0.8)"
+                          : "rgba(239, 68, 68, 0.8)",
+                      color: "white",
                       fontWeight: 600,
-                      borderRadius: 2,
-                      px: 4,
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                      "&:hover": {
-                        bgcolor: "rgba(255,255,255,0.95)",
-                        transform: "scale(1.05)",
-                        boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
-                      },
                     }}
-                  >
-                    Apply Now
-                  </Button>
+                  />
                 </Box>
               </Box>
             </Box>
@@ -347,11 +244,11 @@ export default function JobDetails() {
                 {
                   icon: CalendarTodayRounded,
                   label: "Posted",
-                  value: formatDate(job.createdAt) || "Recently",
+                  value: formatDate(job.createdAt),
                   color: "#F59E0B",
                   delay: 300,
                 },
-              ].map((item, index) => (
+              ].map((item) => (
                 <Grid item xs={12} sm={6} md={3} key={item.label}>
                   <Grow
                     in
@@ -375,13 +272,7 @@ export default function JobDetails() {
                       }}
                     >
                       <CardContent sx={{ p: 2.5 }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            mb: 1.5,
-                          }}
-                        >
+                        <Box sx={{ display: "flex", alignItems: "center", mb: 1.5 }}>
                           <Box
                             sx={{
                               width: 40,
@@ -438,7 +329,7 @@ export default function JobDetails() {
             </Fade>
 
             {/* Requirements */}
-            {Array.isArray(job.requirements) && job.requirements.length > 0 && (
+            {job.requirements && (
               <Fade in timeout={1000}>
                 <Box sx={{ mb: 4 }}>
                   <Box display="flex" alignItems="center" gap={1.5} mb={2}>
@@ -447,22 +338,16 @@ export default function JobDetails() {
                       Requirements
                     </Typography>
                   </Box>
-                  <List sx={{ py: 0 }}>
-                    {job.requirements.map((req, index) => (
-                      <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          <CheckCircleRounded
-                            color="success"
-                            fontSize="small"
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={req}
-                          primaryTypographyProps={{ fontWeight: 500 }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      whiteSpace: "pre-line",
+                      lineHeight: 1.8,
+                      color: "text.secondary",
+                    }}
+                  >
+                    {job.requirements}
+                  </Typography>
                 </Box>
               </Fade>
             )}
@@ -496,7 +381,7 @@ export default function JobDetails() {
             )}
 
             {/* Responsibilities */}
-            {Array.isArray(job.responsibilities) && job.responsibilities.length > 0 && (
+            {job.responsibilities && (
               <Fade in timeout={1200}>
                 <Box sx={{ mb: 4 }}>
                   <Box display="flex" alignItems="center" gap={1.5} mb={2}>
@@ -505,25 +390,22 @@ export default function JobDetails() {
                       Responsibilities
                     </Typography>
                   </Box>
-                  <List sx={{ py: 0 }}>
-                    {job.responsibilities.map((resp, index) => (
-                      <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          <WorkRounded color="warning" fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={resp}
-                          primaryTypographyProps={{ fontWeight: 500 }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      whiteSpace: "pre-line",
+                      lineHeight: 1.8,
+                      color: "text.secondary",
+                    }}
+                  >
+                    {job.responsibilities}
+                  </Typography>
                 </Box>
               </Fade>
             )}
 
             {/* Benefits */}
-            {Array.isArray(job.benefits) && job.benefits.length > 0 && (
+            {job.benefits && (
               <Fade in timeout={1300}>
                 <Box sx={{ mb: 4 }}>
                   <Box display="flex" alignItems="center" gap={1.5} mb={2}>
@@ -532,18 +414,16 @@ export default function JobDetails() {
                       Benefits
                     </Typography>
                   </Box>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {job.benefits.map((benefit, index) => (
-                      <Chip
-                        key={index}
-                        icon={<CheckCircleRounded />}
-                        label={benefit}
-                        variant="outlined"
-                        color="success"
-                        sx={{ fontWeight: 500, borderRadius: 2 }}
-                      />
-                    ))}
-                  </Box>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      whiteSpace: "pre-line",
+                      lineHeight: 1.8,
+                      color: "text.secondary",
+                    }}
+                  >
+                    {job.benefits}
+                  </Typography>
                 </Box>
               </Fade>
             )}
@@ -560,11 +440,7 @@ export default function JobDetails() {
                 <Grid container spacing={3}>
                   {job.department && (
                     <Grid item xs={12} sm={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={500}
-                      >
+                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
                         Department
                       </Typography>
                       <Typography variant="body1" fontWeight={600}>
@@ -572,72 +448,27 @@ export default function JobDetails() {
                       </Typography>
                     </Grid>
                   )}
-                  {job.positions && (
+                  {job.deadline && (
                     <Grid item xs={12} sm={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={500}
-                      >
-                        Open Positions
+                      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        Application Deadline
                       </Typography>
                       <Typography variant="body1" fontWeight={600}>
-                        {job.positions}
+                        {formatDate(job.deadline)}
                       </Typography>
                     </Grid>
                   )}
-                  {job.remote !== undefined && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={500}
-                      >
-                        Remote Work
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {job.remote ? "Available" : "On-site"}
-                      </Typography>
-                    </Grid>
-                  )}
-                  {job.workMode && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={500}
-                      >
-                        Work Mode
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {job.workMode}
-                      </Typography>
-                    </Grid>
-                  )}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Applicants
+                    </Typography>
+                    <Typography variant="body1" fontWeight={600}>
+                      {job.applicantsCount || 0}
+                    </Typography>
+                  </Grid>
                 </Grid>
               </Box>
             </Fade>
-
-            {/* Application Deadline */}
-            {job.deadline && (
-              <Zoom in timeout={800}>
-                <Alert
-                  severity="info"
-                  sx={{
-                    mb: 3,
-                    borderRadius: 2,
-                    "& .MuiAlert-icon": {
-                      alignItems: "center",
-                    },
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>Application Deadline:</strong>{" "}
-                    {formatDate(job.deadline)}
-                  </Typography>
-                </Alert>
-              </Zoom>
-            )}
 
             {/* Footer Actions */}
             <Box
@@ -652,7 +483,7 @@ export default function JobDetails() {
             >
               <Button
                 startIcon={<ArrowBackRounded />}
-                onClick={() => navigate("/jobs")}
+                onClick={() => navigate("/company/jobs")}
                 sx={{
                   borderRadius: 2,
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -661,25 +492,38 @@ export default function JobDetails() {
               >
                 Back to Jobs
               </Button>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleApply}
-                disabled={job.status !== "active"}
-                sx={{
-                  borderRadius: 2,
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 600,
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    transform: "scale(1.05)",
-                    boxShadow: "0 8px 20px rgba(37, 99, 235, 0.3)",
-                  },
-                }}
-              >
-                Apply Now
-              </Button>
+              <Box display="flex" gap={2}>
+                <Button
+                  variant="outlined"
+                  startIcon={<PeopleRounded />}
+                  onClick={() => navigate(`/company/jobs/${jobId}/applicants`)}
+                  sx={{
+                    borderRadius: 2,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "&:hover": { transform: "translateY(-2px)" },
+                  }}
+                >
+                  View Applicants ({job.applicantsCount || 0})
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<EditRounded />}
+                  onClick={() => navigate(`/company/jobs/edit/${jobId}`)}
+                  sx={{
+                    borderRadius: 2,
+                    px: 4,
+                    py: 1.5,
+                    fontWeight: 600,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                      boxShadow: "0 8px 20px rgba(37, 99, 235, 0.3)",
+                    },
+                  }}
+                >
+                  Edit Job
+                </Button>
+              </Box>
             </Box>
           </Paper>
         </Zoom>

@@ -44,7 +44,8 @@ export default function JobApplicationForm() {
 
   // Submit application mutation
   const submitMutation = useMutation({
-    mutationFn: (applicationData) => submitJobApplication(applicationData),
+    mutationFn: (applicationData) =>
+      submitJobApplication(applicationData, user.uid),
     onSuccess: () => {
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -63,8 +64,10 @@ export default function JobApplicationForm() {
     }
   };
 
-  const handleFileUpload = (url) => {
-    handleInputChange("resumeUrl", url);
+  const handleFileUpload = (uploadedFile) => {
+    // FileUploader returns { name, url, path, size, type } object
+    const fileUrl = uploadedFile?.url || uploadedFile;
+    handleInputChange("resumeUrl", fileUrl);
   };
 
   const validateForm = () => {
@@ -202,8 +205,8 @@ export default function JobApplicationForm() {
                 Resume *
               </Typography>
               <FileUploader
-                onFileUpload={handleFileUpload}
-                accept=".pdf,.doc,.docx"
+                onUploadComplete={handleFileUpload}
+                acceptedFormats=".pdf,.doc,.docx"
                 label="Upload Resume (PDF, DOC, DOCX)"
               />
               {errors.resumeUrl && (

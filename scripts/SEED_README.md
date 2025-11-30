@@ -8,8 +8,8 @@ This script populates the Firebase Firestore database with comprehensive demo da
 
 ### 1. Admin Account
 
-- **Email:** admin@careerfinder.com
-- **Password:** Admin@123456
+- **Email:** admin@careerfindr.com
+- **Password:** admin123
 - **Role:** Admin with full system privileges
 
 ### 2. Student Accounts (3)
@@ -147,8 +147,8 @@ The admin account created by this script has full access to:
 
 1. **Login as Admin:**
 
-   - Email: admin@careerfinder.com
-   - Password: Admin@123456
+   - Email: admin@careerfindr.com
+   - Password: admin123
    - Access: Full admin dashboard
 
 2. **Login as Student:**
@@ -171,7 +171,7 @@ To delete all seeded data:
 
 ```bash
 # Delete all users from Auth (requires Firebase CLI)
-firebase auth:delete --email admin@careerfinder.com
+firebase auth:delete --email admin@careerfindr.com
 firebase auth:delete --email john.doe@student.com
 # etc...
 

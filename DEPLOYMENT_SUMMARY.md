@@ -46,8 +46,8 @@
 ### 🔐 Admin Account
 
 ```
-Email: admin@careerfinder.com
-Password: Admin@123456
+Email: admin@careerfindr.com
+Password: admin123
 Privileges: Full system access
 ```
 

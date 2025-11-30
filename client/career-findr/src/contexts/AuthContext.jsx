@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
@@ -46,9 +47,21 @@ export const AuthProvider = ({ children }) => {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
-            const userData = { uid: firebaseUser.uid, ...userDoc.data() };
-            setUser(userData);
-            localStorage.setItem("user", JSON.stringify(userData));
+            const data = userDoc.data();
+            const normalizedUser = {
+              uid: firebaseUser.uid,
+              ...data,
+              emailVerified: firebaseUser.emailVerified,
+              displayName:
+                data.displayName ||
+                data.name ||
+                data.profile?.name ||
+                firebaseUser.displayName ||
+                firebaseUser.email,
+              phone: data.phone || data.profile?.phone || "",
+            };
+            setUser(normalizedUser);
+            localStorage.setItem("user", JSON.stringify(normalizedUser));
           } else {
             setUser(null);
           }
@@ -69,6 +82,7 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Registers a new user with email and password.
+   * Sends verification email for 2-step verification.
    * @param {object} userData - The user's registration data.
    * @returns {Promise<{user: object}>} The newly created user object.
    */
@@ -82,29 +96,79 @@ export const AuthProvider = ({ children }) => {
         userData.password
       );
 
+      // Send verification email with action code settings
+      const actionCodeSettings = {
+        url: window.location.origin + '/login', // Redirect to login after verification
+        handleCodeInApp: false,
+      };
+      
+      try {
+        await sendEmailVerification(userCredential.user, actionCodeSettings);
+        console.log('Verification email sent to:', userData.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Don't throw - let user continue even if email fails
+      }
+
       // Create user profile in Firestore
+      const normalizedName = userData.profileData?.name || userData.name || "";
+      const normalizedPhone =
+        userData.profileData?.phone || userData.phone || "";
+
       const userProfile = {
         email: userData.email,
-        name: userData.profileData?.name || userData.name || "",
-        phone: userData.profileData?.phone || userData.phone || "",
+        name: normalizedName,
+        displayName: normalizedName,
+        phone: normalizedPhone,
         role: userData.role,
+        status: "active", // No admin approval needed - users are active immediately
+        emailVerified: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
+      // Add organization-specific fields for company/institute roles
+      if (userData.profileData?.organizationName) {
+        userProfile.organizationName = userData.profileData.organizationName;
+      }
+      if (userData.profileData?.companyName) {
+        userProfile.companyName = userData.profileData.companyName;
+      }
+      if (userData.profileData?.institutionName) {
+        userProfile.institutionName = userData.profileData.institutionName;
+      }
+      if (userData.profileData?.instituteName) {
+        userProfile.instituteName = userData.profileData.instituteName;
+      }
+
       await setDoc(doc(db, "users", userCredential.user.uid), userProfile);
 
-      // Set user state
       const fullUserData = { uid: userCredential.user.uid, ...userProfile };
       setUser(fullUserData);
       localStorage.setItem("user", JSON.stringify(fullUserData));
 
-      return { user: fullUserData };
+      return { user: fullUserData, verificationEmailSent: true };
     } catch (err) {
       const errorMessage = err.message || "Registration failed";
       setError(errorMessage);
       throw new Error(errorMessage);
     }
+  };
+
+  /**
+   * Resends verification email to current user
+   */
+  const resendVerificationEmail = async () => {
+    if (auth.currentUser) {
+      const actionCodeSettings = {
+        url: window.location.origin + '/login',
+        handleCodeInApp: false,
+      };
+      await sendEmailVerification(auth.currentUser, actionCodeSettings);
+      console.log('Verification email resent to:', auth.currentUser.email);
+      return true;
+    }
+    throw new Error("No user logged in");
   };
 
   /**
@@ -129,7 +193,19 @@ export const AuthProvider = ({ children }) => {
         throw new Error("User profile not found");
       }
 
-      const fullUserData = { uid: userCredential.user.uid, ...userDoc.data() };
+      const data = userDoc.data();
+      const fullUserData = {
+        uid: userCredential.user.uid,
+        ...data,
+        emailVerified: userCredential.user.emailVerified,
+        displayName:
+          data.displayName ||
+          data.name ||
+          data.profile?.name ||
+          userCredential.user.displayName ||
+          userCredential.user.email,
+        phone: data.phone || data.profile?.phone || "",
+      };
       setUser(fullUserData);
       localStorage.setItem("user", JSON.stringify(fullUserData));
 
@@ -176,14 +252,21 @@ export const AuthProvider = ({ children }) => {
 
       if (userDoc.exists()) {
         // User exists, use existing profile
-        fullUserData = { uid: firebaseUser.uid, ...userDoc.data() };
+        fullUserData = {
+          uid: firebaseUser.uid,
+          ...userDoc.data(),
+          emailVerified: true, // Google users are always verified
+        };
       } else {
         // New user, create profile
         const userProfile = {
           email: firebaseUser.email,
           name: firebaseUser.displayName || "",
+          displayName: firebaseUser.displayName || "",
           phone: firebaseUser.phoneNumber || "",
           role: defaultRole,
+          status: "active",
+          emailVerified: true, // Google users are automatically verified
           photoURL: firebaseUser.photoURL || "",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -212,7 +295,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     signInWithGoogle,
+    resendVerificationEmail,
     isAuthenticated: !!user,
+    isEmailVerified: user?.emailVerified || false,
     isStudent: user?.role === "student",
     isInstitute: user?.role === "institute",
     isCompany: user?.role === "company",

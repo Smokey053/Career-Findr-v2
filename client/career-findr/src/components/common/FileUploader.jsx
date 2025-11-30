@@ -27,6 +27,7 @@ import {
   formatFileSize,
   getFileExtension,
 } from "../../services/storageService";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function FileUploader({
   onUploadComplete,
@@ -38,6 +39,7 @@ export default function FileUploader({
   label = "Upload Files",
   helperText = "",
 }) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [files, setFiles] = useState([]);
@@ -79,16 +81,26 @@ export default function FileUploader({
   const handleUpload = async () => {
     if (files.length === 0) return;
 
+    if (!user?.uid) {
+      setError("You must be logged in to upload files");
+      return;
+    }
+
     setUploading(true);
     setError("");
     const uploaded = [];
 
     try {
       for (const file of files) {
-        // Use the storage service for uploading
-        const result = await uploadFile(file, storagePath, (progressValue) => {
-          setProgress(progressValue);
-        });
+        // Use the storage service for uploading with userId for proper path
+        const result = await uploadFile(
+          file,
+          storagePath,
+          user.uid,
+          (progressValue) => {
+            setProgress(progressValue);
+          }
+        );
 
         uploaded.push({
           name: file.name,
@@ -108,7 +120,7 @@ export default function FileUploader({
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setError(err.message || "Upload failed");
+      setError(err.message || "Upload failed. Please check your permissions.");
       if (onUploadError) {
         onUploadError(err);
       }

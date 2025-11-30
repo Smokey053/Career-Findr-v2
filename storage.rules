@@ -20,121 +20,96 @@ service firebase.storage {
     }
     
     function isValidDocumentType() {
-      return request.resource.contentType.matches('application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document)');
+      return request.resource.contentType.matches('application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document)') ||
+             request.resource.contentType.matches('image/.*');
     }
     
     function isUnderFileSize(maxSizeMB) {
       return request.resource.size < maxSizeMB * 1024 * 1024;
     }
     
-    // Resumes - only PDF, max 10MB
+    // Resumes - PDF and documents, max 10MB - only owner can write
     match /resumes/{userId}/{fileName} {
-      // Authenticated users can read (for job applications)
       allow read: if isSignedIn();
-      
-      // Users can only upload their own resumes
-      allow write: if isOwner(userId) && 
-                     isValidPDFType() && 
-                     isUnderFileSize(10);
-      
-      // Users can delete their own resumes
+      allow write: if isOwner(userId) && isUnderFileSize(10);
       allow delete: if isOwner(userId);
     }
     
-    // Profile images - only images, max 5MB
+    // Profile images - only images, max 5MB - only owner can write
     match /profile-images/{userId}/{fileName} {
-      // Anyone can view profile images (public)
       allow read: if true;
-      
-      // Users can only upload their own profile images
-      allow write: if isOwner(userId) && 
-                     isValidImageType() && 
-                     isUnderFileSize(5);
-      
-      // Users can delete their own profile images
+      allow write: if isOwner(userId) && isValidImageType() && isUnderFileSize(5);
       allow delete: if isOwner(userId);
     }
     
-    // Company logos - only images, max 5MB
+    // Company logos - only images, max 5MB - only company owner can write
     match /company-logos/{companyId}/{fileName} {
-      // Anyone can view company logos (public)
       allow read: if true;
-      
-      // Authenticated users can upload company logos
-      allow write: if isSignedIn() && 
-                     isValidImageType() && 
-                     isUnderFileSize(5);
-      
-      // Authenticated users can delete (company owners should be verified in app logic)
-      allow delete: if isSignedIn();
+      allow write: if isOwner(companyId) && isValidImageType() && isUnderFileSize(5);
+      allow delete: if isOwner(companyId);
     }
     
-    // Institute logos - only images, max 5MB
+    // Institute logos - only images, max 5MB - only institute owner can write
     match /institute-logos/{instituteId}/{fileName} {
-      // Anyone can view institute logos (public)
       allow read: if true;
-      
-      // Authenticated users can upload institute logos
-      allow write: if isSignedIn() && 
-                     isValidImageType() && 
-                     isUnderFileSize(5);
-      
-      // Authenticated users can delete
-      allow delete: if isSignedIn();
+      allow write: if isOwner(instituteId) && isValidImageType() && isUnderFileSize(5);
+      allow delete: if isOwner(instituteId);
     }
     
     // Course materials - documents and images, max 20MB
-    match /course-materials/{userId}/{fileName} {
-      // Only authenticated users can read course materials
+    match /course-materials/{path=**} {
       allow read: if isSignedIn();
-      
-      // Only authenticated users can upload course materials
-      allow write: if isSignedIn() && 
-                     (isValidDocumentType() || isValidImageType()) && 
-                     isUnderFileSize(20);
-      
-      // Authenticated users can delete
+      allow write: if isSignedIn() && isUnderFileSize(20);
       allow delete: if isSignedIn();
     }
     
     // Job attachments - documents, max 10MB
-    match /job-attachments/{jobId}/{fileName} {
-      // Authenticated users can read job attachments
+    match /job-attachments/{path=**} {
       allow read: if isSignedIn();
-      
-      // Authenticated users can upload job attachments
-      allow write: if isSignedIn() && 
-                     isValidDocumentType() && 
-                     isUnderFileSize(10);
-      
-      // Authenticated users can delete
+      allow write: if isSignedIn() && isUnderFileSize(10);
       allow delete: if isSignedIn();
     }
     
     // Chat attachments - images and documents, max 10MB
-    match /chat-attachments/{userId}/{fileName} {
-      // Authenticated users can read chat attachments
+    match /chat-attachments/{path=**} {
       allow read: if isSignedIn();
-      
-      // Users can only upload their own chat attachments
-      allow write: if isOwner(userId) && 
-                     (isValidImageType() || isValidDocumentType()) && 
-                     isUnderFileSize(10);
-      
-      // Users can delete their own chat attachments
+      allow write: if isSignedIn() && isUnderFileSize(10);
+      allow delete: if isSignedIn();
+    }
+    
+    // General documents - various types, max 20MB (for applications, transcripts, etc.)
+    // Uses userId subfolder for ownership validation
+    match /documents/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isUnderFileSize(20);
       allow delete: if isOwner(userId);
     }
     
-    // General documents - various types, max 20MB
-    match /documents/{userId}/{fileName} {
-      // Users can only read their own documents
-      allow read: if isOwner(userId);
-      
-      // Users can only upload their own documents
-      allow write: if isOwner(userId) && 
-                     isUnderFileSize(20);
-      
-      // Users can delete their own documents
+    // Application documents - for student applications
+    match /applications/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isUnderFileSize(20);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Transcripts
+    match /transcripts/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isUnderFileSize(10);
+      allow delete: if isOwner(userId);
+    }
+    
+    // ID copies
+    match /id-copies/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isUnderFileSize(10);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Certificates
+    match /certificates/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isUnderFileSize(10);
       allow delete: if isOwner(userId);
     }
   }

@@ -11,19 +11,29 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  limit,
 } from "firebase/firestore";
+import { searchCourses as algoliaSearchCourses, isAlgoliaConfigured } from "./algoliaService";
+
+// Helper function to remove undefined values from an object
+const removeUndefined = (obj) => {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined)
+  );
+};
 
 // Create a new course
-export const createCourse = async (courseData, institutionId) => {
+export const createCourse = async (courseData, institutionId, institutionName) => {
   try {
     const coursesRef = collection(db, "courses");
-    const newCourse = {
+    const newCourse = removeUndefined({
       ...courseData,
       institutionId,
+      institutionName: institutionName || courseData.institutionName || null,
       status: courseData.status || "active",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    };
+    });
 
     const docRef = await addDoc(coursesRef, newCourse);
     return { id: docRef.id, ...newCourse };
@@ -37,10 +47,10 @@ export const createCourse = async (courseData, institutionId) => {
 export const updateCourse = async (courseId, courseData) => {
   try {
     const courseRef = doc(db, "courses", courseId);
-    const updatedData = {
+    const updatedData = removeUndefined({
       ...courseData,
       updatedAt: serverTimestamp(),
-    };
+    });
 
     await updateDoc(courseRef, updatedData);
     return { id: courseId, ...updatedData };
@@ -114,6 +124,71 @@ export const getAllCourses = async (filters = {}) => {
     return courses;
   } catch (error) {
     console.error("Error getting courses:", error);
+    throw error;
+  }
+};
+
+// Search courses with full-text search (Algolia) or Firebase fallback
+export const searchCourses = async (searchQuery = '', filters = {}, page = 0, pageSize = 20) => {
+  try {
+    // Try Algolia first if configured
+    if (isAlgoliaConfigured()) {
+      const algoliaResults = await algoliaSearchCourses(searchQuery, filters, page, pageSize);
+      if (!algoliaResults.fallback && !algoliaResults.error) {
+        return {
+          courses: algoliaResults.hits,
+          totalCount: algoliaResults.nbHits,
+          totalPages: algoliaResults.nbPages,
+          currentPage: algoliaResults.page,
+          source: 'algolia',
+        };
+      }
+    }
+
+    // Fallback to Firebase
+    const coursesRef = collection(db, "courses");
+    const constraints = [where("status", "==", "active")];
+
+    if (filters.field) {
+      constraints.push(where("field", "==", filters.field));
+    }
+    if (filters.level) {
+      constraints.push(where("level", "==", filters.level));
+    }
+    if (filters.location) {
+      constraints.push(where("location", "==", filters.location));
+    }
+
+    constraints.push(orderBy("createdAt", "desc"));
+
+    const q = query(coursesRef, ...constraints);
+    const querySnapshot = await getDocs(q);
+    
+    let courses = [];
+    querySnapshot.forEach((doc) => {
+      courses.push({ id: doc.id, ...doc.data() });
+    });
+
+    // Client-side text search if query provided
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      courses = courses.filter(course =>
+        course.name?.toLowerCase().includes(searchLower) ||
+        course.description?.toLowerCase().includes(searchLower) ||
+        course.institutionName?.toLowerCase().includes(searchLower) ||
+        course.field?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return {
+      courses,
+      totalCount: courses.length,
+      totalPages: Math.ceil(courses.length / pageSize),
+      currentPage: page,
+      source: 'firebase',
+    };
+  } catch (error) {
+    console.error("Error searching courses:", error);
     throw error;
   }
 };

@@ -13,6 +13,7 @@ import admin from "firebase-admin";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
+import algoliasearch from "algoliasearch";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,15 +32,53 @@ admin.initializeApp({
 const db = admin.firestore();
 const auth = admin.auth();
 
-// Demo data generators
+// Initialize Algolia (optional - only if credentials are provided)
+const ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID;
+const ALGOLIA_ADMIN_KEY = process.env.ALGOLIA_ADMIN_KEY;
+let algoliaClient = null;
+let jobsIndex = null;
+let coursesIndex = null;
+
+if (ALGOLIA_APP_ID && ALGOLIA_ADMIN_KEY) {
+  algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY);
+  jobsIndex = algoliaClient.initIndex('jobs');
+  coursesIndex = algoliaClient.initIndex('courses');
+  console.log("✅ Algolia client initialized");
+} else {
+  console.log("⚠️  Algolia credentials not found. Skipping Algolia sync.");
+  console.log("   Set ALGOLIA_APP_ID and ALGOLIA_ADMIN_KEY environment variables to enable.");
+}
+
+// Helper functions for dynamic dates
+const now = new Date();
+const currentYear = now.getFullYear();
+
+// Get a date relative to today
+const getRelativeDate = (daysFromNow) => {
+  const date = new Date(now);
+  date.setDate(date.getDate() + daysFromNow);
+  return date;
+};
+
+// Get a date in the future for deadlines/start dates
+const getFutureDate = (monthsFromNow, dayOfMonth = 1) => {
+  const date = new Date(now);
+  date.setMonth(date.getMonth() + monthsFromNow);
+  date.setDate(dayOfMonth);
+  return date;
+};
+
+// Demo data generators - Dynamic dates based on current date
 const demoData = {
   adminUser: {
     uid: "admin-user-001",
-    email: "admin@careerfinder.com",
-    password: "Admin@123456",
+    email: "admin@careerfindr.com",
+    password: "admin123",
     displayName: "Administrator",
+    name: "Administrator",
     role: "admin",
     status: "active",
+    emailVerified: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -50,8 +89,10 @@ const demoData = {
       email: "john.doe@student.com",
       password: "Student@123456",
       displayName: "John Doe",
+      name: "John Doe",
       role: "student",
       status: "active",
+      emailVerified: true,
       phone: "+266 26123456",
       location: "Maseru",
       skills: ["JavaScript", "React", "Node.js", "MongoDB"],
@@ -66,8 +107,10 @@ const demoData = {
       email: "jane.smith@student.com",
       password: "Student@123456",
       displayName: "Jane Smith",
+      name: "Jane Smith",
       role: "student",
       status: "active",
+      emailVerified: true,
       phone: "+266 26234567",
       location: "Leribe",
       skills: ["Python", "Data Analysis", "SQL", "Tableau"],
@@ -82,8 +125,10 @@ const demoData = {
       email: "peter.wilson@student.com",
       password: "Student@123456",
       displayName: "Peter Wilson",
+      name: "Peter Wilson",
       role: "student",
       status: "active",
+      emailVerified: true,
       phone: "+266 26345678",
       location: "Mafeteng",
       skills: ["Java", "Android", "Firebase", "REST APIs"],
@@ -101,8 +146,10 @@ const demoData = {
       email: "info@nationalu.ls",
       password: "Institution@123456",
       displayName: "National University of Lesotho",
+      name: "National University of Lesotho",
       role: "institute",
       status: "active",
+      emailVerified: true,
       institutionName: "National University of Lesotho",
       registrationNumber: "NUL-2020-001",
       location: "Maseru",
@@ -111,7 +158,6 @@ const demoData = {
       description:
         "Leading institution providing quality higher education in various fields.",
       logo: null,
-      verificationStatus: "verified",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -120,8 +166,10 @@ const demoData = {
       email: "contact@letie.edu.ls",
       password: "Institution@123456",
       displayName: "Lesotho Technical Institute of Education",
+      name: "Lesotho Technical Institute of Education",
       role: "institute",
       status: "active",
+      emailVerified: true,
       institutionName: "Lesotho Technical Institute of Education",
       registrationNumber: "LETIE-2021-002",
       location: "Leribe",
@@ -129,7 +177,6 @@ const demoData = {
       website: "https://www.letie.edu.ls",
       description: "Technical and vocational education provider.",
       logo: null,
-      verificationStatus: "verified",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -141,8 +188,10 @@ const demoData = {
       email: "careers@techcorp.ls",
       password: "Company@123456",
       displayName: "Tech Corporation Lesotho",
+      name: "Tech Corporation Lesotho",
       role: "company",
       status: "active",
+      emailVerified: true,
       companyName: "Tech Corporation Lesotho",
       registrationNumber: "TCL-2019-001",
       location: "Maseru",
@@ -161,8 +210,10 @@ const demoData = {
       email: "jobs@financepro.com",
       password: "Company@123456",
       displayName: "Finance Pro Services",
+      name: "Finance Pro Services",
       role: "company",
       status: "active",
+      emailVerified: true,
       companyName: "Finance Pro Services",
       registrationNumber: "FPS-2020-002",
       location: "Maseru",
@@ -177,9 +228,11 @@ const demoData = {
     },
   ],
 
+  // Updated courses with dynamic dates
   courses: [
     {
       institutionId: "institution-001",
+      institutionName: "National University of Lesotho",
       name: "Bachelor of Science in Computer Science",
       code: "CS101",
       field: "Computer Science",
@@ -189,17 +242,19 @@ const demoData = {
         "Comprehensive program covering software development, algorithms, databases, and web technologies.",
       location: "Maseru",
       tuition: 85000,
-      startDate: new Date("2024-09-01"),
-      applicationDeadline: new Date("2024-08-31"),
+      fees: 85000,
+      currency: "LSL",
+      startDate: getFutureDate(3, 1), // 3 months from now
+      applicationDeadline: getFutureDate(2, 15), // 2 months from now
       capacity: 100,
       enrolled: 45,
       status: "active",
-      verified: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       institutionId: "institution-001",
+      institutionName: "National University of Lesotho",
       name: "Master of Business Administration",
       code: "MBA101",
       field: "Business",
@@ -209,17 +264,19 @@ const demoData = {
         "Advanced management program with focus on entrepreneurship and strategic planning.",
       location: "Maseru",
       tuition: 120000,
-      startDate: new Date("2024-09-15"),
-      applicationDeadline: new Date("2024-09-10"),
+      fees: 120000,
+      currency: "LSL",
+      startDate: getFutureDate(4, 15), // 4 months from now
+      applicationDeadline: getFutureDate(3, 30), // 3 months from now
       capacity: 50,
       enrolled: 28,
       status: "active",
-      verified: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       institutionId: "institution-002",
+      institutionName: "Lesotho Technical Institute of Education",
       name: "Diploma in Electrical Engineering",
       code: "EE201",
       field: "Engineering",
@@ -229,17 +286,19 @@ const demoData = {
         "Technical program covering power systems, electronics, and industrial applications.",
       location: "Leribe",
       tuition: 65000,
-      startDate: new Date("2024-10-01"),
-      applicationDeadline: new Date("2024-09-30"),
+      fees: 65000,
+      currency: "LSL",
+      startDate: getFutureDate(5, 1), // 5 months from now
+      applicationDeadline: getFutureDate(4, 15), // 4 months from now
       capacity: 75,
       enrolled: 52,
       status: "active",
-      verified: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       institutionId: "institution-001",
+      institutionName: "National University of Lesotho",
       name: "Bachelor of Science in Nursing",
       code: "NUR102",
       field: "Medicine",
@@ -249,25 +308,29 @@ const demoData = {
         "Professional nursing program with clinical practice and community health focus.",
       location: "Maseru",
       tuition: 95000,
-      startDate: new Date("2024-09-01"),
-      applicationDeadline: new Date("2024-08-25"),
+      fees: 95000,
+      currency: "LSL",
+      startDate: getFutureDate(3, 1), // 3 months from now
+      applicationDeadline: getFutureDate(2, 10), // 2 months from now
       capacity: 80,
       enrolled: 38,
       status: "active",
-      verified: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
   ],
 
+  // Updated jobs with dynamic dates
   jobs: [
     {
       companyId: "company-001",
+      companyName: "Tech Corporation Lesotho",
       title: "Senior Full Stack Developer",
       type: "Full-Time",
       location: "Maseru",
       salaryMin: 45000,
       salaryMax: 65000,
+      currency: "LSL",
       experienceLevel: "Senior Level",
       description:
         "We are looking for an experienced full stack developer to lead our web development team. You will work with modern technologies and lead a team of junior developers.",
@@ -284,17 +347,19 @@ const demoData = {
         "Professional development",
       ],
       status: "active",
-      applicationDeadline: new Date("2024-12-31"),
+      applicationDeadline: getFutureDate(2, 31), // ~2 months from now
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       companyId: "company-001",
+      companyName: "Tech Corporation Lesotho",
       title: "Junior Software Developer",
       type: "Full-Time",
       location: "Maseru",
       salaryMin: 20000,
       salaryMax: 30000,
+      currency: "LSL",
       experienceLevel: "Entry Level",
       description:
         "Join our team as a junior developer! You will be mentored by senior developers and contribute to exciting projects using modern web technologies.",
@@ -307,17 +372,19 @@ const demoData = {
       skills: ["JavaScript", "React", "HTML/CSS", "Git"],
       benefits: ["Mentorship", "Training opportunities", "Flexible hours"],
       status: "active",
-      applicationDeadline: new Date("2024-12-15"),
+      applicationDeadline: getFutureDate(1, 15), // ~1.5 months from now
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       companyId: "company-002",
+      companyName: "Finance Pro Services",
       title: "Financial Analyst",
       type: "Full-Time",
       location: "Maseru",
       salaryMin: 35000,
       salaryMax: 50000,
+      currency: "LSL",
       experienceLevel: "Mid Level",
       description:
         "Seeking a financial analyst to support our client advisory services. Analyze financial data and provide insights to help client decision-making.",
@@ -330,17 +397,19 @@ const demoData = {
       skills: ["Financial Analysis", "Excel", "Python", "SQL"],
       benefits: ["Performance bonus", "Health insurance", "Pension"],
       status: "active",
-      applicationDeadline: new Date("2024-12-20"),
+      applicationDeadline: getFutureDate(1, 20), // ~1.5 months from now
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       companyId: "company-002",
+      companyName: "Finance Pro Services",
       title: "Accounting Clerk",
       type: "Part-Time",
       location: "Maseru",
       salaryMin: 12000,
       salaryMax: 18000,
+      currency: "LSL",
       experienceLevel: "Entry Level",
       description:
         "Looking for detail-oriented accounting clerk to assist with accounts payable and receivable processes.",
@@ -353,7 +422,7 @@ const demoData = {
       skills: ["Accounting", "Excel", "Data Entry", "Communication"],
       benefits: ["Flexible schedule", "Training provided", "Casual dress"],
       status: "active",
-      applicationDeadline: new Date("2024-12-10"),
+      applicationDeadline: getFutureDate(1, 10), // ~1 month from now
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -365,8 +434,11 @@ const demoData = {
       type: "course",
       courseId: "course-001",
       institutionId: "institution-001",
+      courseName: "Bachelor of Science in Computer Science",
+      institutionName: "National University of Lesotho",
       status: "approved",
-      appliedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      appliedAt: getRelativeDate(-30), // 30 days ago
+      createdAt: getRelativeDate(-30),
       updatedAt: new Date(),
     },
     {
@@ -374,8 +446,11 @@ const demoData = {
       type: "course",
       courseId: "course-002",
       institutionId: "institution-001",
+      courseName: "Master of Business Administration",
+      institutionName: "National University of Lesotho",
       status: "pending",
-      appliedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      appliedAt: getRelativeDate(-10), // 10 days ago
+      createdAt: getRelativeDate(-10),
       updatedAt: new Date(),
     },
     {
@@ -383,8 +458,11 @@ const demoData = {
       type: "job",
       jobId: "job-001",
       companyId: "company-001",
+      jobTitle: "Senior Full Stack Developer",
+      companyName: "Tech Corporation Lesotho",
       status: "pending",
-      appliedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      appliedAt: getRelativeDate(-5), // 5 days ago
+      createdAt: getRelativeDate(-5),
       updatedAt: new Date(),
     },
     {
@@ -392,328 +470,273 @@ const demoData = {
       type: "job",
       jobId: "job-002",
       companyId: "company-001",
+      jobTitle: "Junior Software Developer",
+      companyName: "Tech Corporation Lesotho",
       status: "interviewing",
-      appliedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      appliedAt: getRelativeDate(-3), // 3 days ago
+      createdAt: getRelativeDate(-3),
       updatedAt: new Date(),
     },
   ],
 
   admissions: [
     {
-      applicationId: "admission-001",
+      applicationId: "application-001",
       studentId: "student-001",
       institutionId: "institution-001",
       courseId: "course-001",
-      status: "accepted",
-      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-      updatedAt: new Date(),
+      courseName: "Bachelor of Science in Computer Science",
+      institutionName: "National University of Lesotho",
+      status: "pending",
+      createdAt: new Date(),
     },
   ],
 };
 
-// Seed functions
-async function seedAdminUser() {
-  console.log("\n📝 Seeding admin user...");
+// Helper function to create or update a user
+async function createOrUpdateUser(userData) {
   try {
-    // Create auth user
-    const adminAuthUser = await auth.createUser({
-      uid: demoData.adminUser.uid,
-      email: demoData.adminUser.email,
-      password: demoData.adminUser.password,
-      displayName: demoData.adminUser.displayName,
-      emailVerified: true,
-    });
-
-    // Create Firestore document
-    await db.collection("users").doc(demoData.adminUser.uid).set({
-      uid: demoData.adminUser.uid,
-      email: demoData.adminUser.email,
-      displayName: demoData.adminUser.displayName,
-      role: "admin",
-      status: "active",
-      createdAt: admin.firestore.Timestamp.now(),
-      updatedAt: admin.firestore.Timestamp.now(),
-    });
-
-    console.log("✅ Admin user created successfully");
-    console.log(`   Email: ${demoData.adminUser.email}`);
-    console.log(`   Password: ${demoData.adminUser.password}`);
-  } catch (error) {
-    if (error.code === "auth/uid-already-exists") {
-      console.log("⚠️  Admin user already exists, skipping creation");
-    } else {
-      throw error;
-    }
-  }
-}
-
-async function createAuthUser(userData) {
-  try {
-    const authUser = await auth.createUser({
-      uid: userData.uid,
-      email: userData.email,
-      password: userData.password,
-      displayName: userData.displayName,
-      emailVerified: true,
-    });
-    return authUser;
-  } catch (error) {
-    if (error.code === "auth/uid-already-exists") {
+    // Try to get existing user
+    try {
+      await auth.getUser(userData.uid);
       console.log(
         `⚠️  User ${userData.email} already exists, skipping auth creation`
       );
-      return null;
-    }
-    throw error;
-  }
-}
-
-async function seedStudents() {
-  console.log("\n👥 Seeding students...");
-  let counter = 0;
-
-  for (const student of demoData.students) {
-    try {
-      await createAuthUser(student);
-
-      await db.collection("users").doc(student.uid).set({
-        uid: student.uid,
-        email: student.email,
-        displayName: student.displayName,
-        role: "student",
-        status: "active",
-        phone: student.phone,
-        location: student.location,
-        skills: student.skills,
-        bio: student.bio,
-        profilePicture: null,
-        cv: null,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      counter++;
     } catch (error) {
-      console.error(`Error creating student ${student.email}:`, error.message);
-    }
-  }
-
-  console.log(`✅ ${counter}/${demoData.students.length} students created`);
-}
-
-async function seedInstitutions() {
-  console.log("\n🏫 Seeding institutions...");
-  let counter = 0;
-
-  for (const institution of demoData.institutions) {
-    try {
-      await createAuthUser(institution);
-
-      await db.collection("users").doc(institution.uid).set({
-        uid: institution.uid,
-        email: institution.email,
-        displayName: institution.displayName,
-        role: "institute",
-        status: "active",
-        institutionName: institution.institutionName,
-        registrationNumber: institution.registrationNumber,
-        location: institution.location,
-        phone: institution.phone,
-        website: institution.website,
-        description: institution.description,
-        logo: null,
-        verificationStatus: "verified",
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      counter++;
-    } catch (error) {
-      console.error(
-        `Error creating institution ${institution.email}:`,
-        error.message
-      );
-    }
-  }
-
-  console.log(
-    `✅ ${counter}/${demoData.institutions.length} institutions created`
-  );
-}
-
-async function seedCompanies() {
-  console.log("\n🏢 Seeding companies...");
-  let counter = 0;
-
-  for (const company of demoData.companies) {
-    try {
-      await createAuthUser(company);
-
-      await db.collection("users").doc(company.uid).set({
-        uid: company.uid,
-        email: company.email,
-        displayName: company.displayName,
-        role: "company",
-        status: "active",
-        companyName: company.companyName,
-        registrationNumber: company.registrationNumber,
-        location: company.location,
-        phone: company.phone,
-        website: company.website,
-        description: company.description,
-        logo: null,
-        industry: company.industry,
-        companySize: company.companySize,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      counter++;
-    } catch (error) {
-      console.error(`Error creating company ${company.email}:`, error.message);
-    }
-  }
-
-  console.log(`✅ ${counter}/${demoData.companies.length} companies created`);
-}
-
-async function seedCourses() {
-  console.log("\n📚 Seeding courses...");
-  let counter = 0;
-
-  for (const course of demoData.courses) {
-    try {
-      const docRef = await db.collection("courses").add({
-        ...course,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      // Store the ID for later reference
-      if (counter === 0) {
-        demoData.courseIds = demoData.courseIds || [];
-        demoData.courseIds.push(docRef.id);
+      if (error.code === "auth/user-not-found") {
+        // Create new user
+        await auth.createUser({
+          uid: userData.uid,
+          email: userData.email,
+          password: userData.password,
+          displayName: userData.displayName,
+          emailVerified: true,
+        });
+        console.log(`✅ Created auth user: ${userData.email}`);
+      } else {
+        throw error;
       }
-
-      counter++;
-    } catch (error) {
-      console.error(`Error creating course:`, error.message);
     }
-  }
 
-  console.log(`✅ ${counter}/${demoData.courses.length} courses created`);
+    // Create or update Firestore document
+    const { password, ...firestoreData } = userData;
+    await db
+      .collection("users")
+      .doc(userData.uid)
+      .set(firestoreData, { merge: true });
+
+    return true;
+  } catch (error) {
+    console.error(
+      `Error creating/updating user ${userData.email}:`,
+      error.message
+    );
+    return false;
+  }
 }
 
-async function seedJobs() {
-  console.log("\n💼 Seeding jobs...");
-  let counter = 0;
-
-  for (const job of demoData.jobs) {
-    try {
-      const docRef = await db.collection("jobs").add({
-        ...job,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      if (counter === 0) {
-        demoData.jobIds = demoData.jobIds || [];
-        demoData.jobIds.push(docRef.id);
-      }
-
-      counter++;
-    } catch (error) {
-      console.error(`Error creating job:`, error.message);
-    }
-  }
-
-  console.log(`✅ ${counter}/${demoData.jobs.length} jobs created`);
-}
-
-async function seedApplications() {
-  console.log("\n📋 Seeding applications...");
-  let counter = 0;
-
-  for (const application of demoData.applications) {
-    try {
-      await db.collection("applications").add({
-        ...application,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      counter++;
-    } catch (error) {
-      console.error(`Error creating application:`, error.message);
-    }
-  }
-
-  console.log(
-    `✅ ${counter}/${demoData.applications.length} applications created`
-  );
-}
-
-async function seedAdmissions() {
-  console.log("\n✅ Seeding admissions...");
-  let counter = 0;
-
-  for (const admission of demoData.admissions) {
-    try {
-      await db.collection("admissions").add({
-        ...admission,
-        createdAt: admin.firestore.Timestamp.now(),
-        updatedAt: admin.firestore.Timestamp.now(),
-      });
-
-      counter++;
-    } catch (error) {
-      console.error(`Error creating admission:`, error.message);
-    }
-  }
-
-  console.log(`✅ ${counter}/${demoData.admissions.length} admissions created`);
-}
-
-// Main seed function
+// Main seeding function
 async function seedDatabase() {
   console.log("🌱 Starting database seed...");
   console.log("=====================================\n");
 
   try {
-    await seedAdminUser();
-    await seedStudents();
-    await seedInstitutions();
-    await seedCompanies();
-    await seedCourses();
-    await seedJobs();
-    await seedApplications();
-    await seedAdmissions();
+    // Seed admin user
+    console.log("📝 Seeding admin user...");
+    const adminData = demoData.adminUser;
+    try {
+      await auth.getUser(adminData.uid);
+      console.log(
+        "⚠️  Admin UID already exists. Updating admin credentials to match docs..."
+      );
+      await auth.updateUser(adminData.uid, {
+        email: adminData.email,
+        password: adminData.password,
+        displayName: adminData.displayName,
+        emailVerified: true,
+      });
+    } catch (error) {
+      if (error.code === "auth/user-not-found") {
+        await auth.createUser({
+          uid: adminData.uid,
+          email: adminData.email,
+          password: adminData.password,
+          displayName: adminData.displayName,
+          emailVerified: true,
+        });
+      }
+    }
+    const { password: adminPw, ...adminFirestoreData } = adminData;
+    await db
+      .collection("users")
+      .doc(adminData.uid)
+      .set(adminFirestoreData, { merge: true });
+    console.log("✅ Admin credentials synced successfully");
+    console.log(`   Email: ${adminData.email}`);
+    console.log(`   Password: ${adminData.password}\n`);
 
-    console.log("\n=====================================");
-    console.log("✅ Database seeding completed successfully!\n");
-    console.log("📝 Demo Account Credentials:");
+    // Seed students
+    console.log("👥 Seeding students...");
+    let studentCount = 0;
+    for (const student of demoData.students) {
+      if (await createOrUpdateUser(student)) studentCount++;
+    }
+    console.log(
+      `✅ ${studentCount}/${demoData.students.length} students created\n`
+    );
+
+    // Seed institutions
+    console.log("🏫 Seeding institutions...");
+    let instCount = 0;
+    for (const institution of demoData.institutions) {
+      if (await createOrUpdateUser(institution)) instCount++;
+    }
+    console.log(
+      `✅ ${instCount}/${demoData.institutions.length} institutions created\n`
+    );
+
+    // Seed companies
+    console.log("🏢 Seeding companies...");
+    let compCount = 0;
+    for (const company of demoData.companies) {
+      if (await createOrUpdateUser(company)) compCount++;
+    }
+    console.log(
+      `✅ ${compCount}/${demoData.companies.length} companies created\n`
+    );
+
+    // Seed courses
+    console.log("📚 Seeding courses...");
+    const coursesRef = db.collection("courses");
+    const courseIds = [];
+    const algoliaCoursesRecords = [];
+    for (const course of demoData.courses) {
+      const docRef = await coursesRef.add(course);
+      courseIds.push(docRef.id);
+      // Prepare Algolia record
+      if (coursesIndex) {
+        algoliaCoursesRecords.push({
+          objectID: docRef.id,
+          ...course,
+          // Convert dates to timestamps for Algolia
+          startDate: course.startDate ? course.startDate.getTime() : null,
+          applicationDeadline: course.applicationDeadline ? course.applicationDeadline.getTime() : null,
+          createdAt: course.createdAt ? course.createdAt.getTime() : Date.now(),
+          updatedAt: course.updatedAt ? course.updatedAt.getTime() : Date.now(),
+        });
+      }
+    }
+    console.log(
+      `✅ ${demoData.courses.length}/${demoData.courses.length} courses created\n`
+    );
+
+    // Seed jobs
+    console.log("💼 Seeding jobs...");
+    const jobsRef = db.collection("jobs");
+    const jobIds = [];
+    const algoliaJobsRecords = [];
+    for (const job of demoData.jobs) {
+      const docRef = await jobsRef.add(job);
+      jobIds.push(docRef.id);
+      // Prepare Algolia record
+      if (jobsIndex) {
+        algoliaJobsRecords.push({
+          objectID: docRef.id,
+          ...job,
+          // Convert dates to timestamps for Algolia
+          applicationDeadline: job.applicationDeadline ? job.applicationDeadline.getTime() : null,
+          createdAt: job.createdAt ? job.createdAt.getTime() : Date.now(),
+          updatedAt: job.updatedAt ? job.updatedAt.getTime() : Date.now(),
+        });
+      }
+    }
+    console.log(
+      `✅ ${demoData.jobs.length}/${demoData.jobs.length} jobs created\n`
+    );
+
+    // Sync to Algolia
+    if (algoliaClient) {
+      console.log("🔍 Syncing to Algolia search...");
+      try {
+        if (algoliaCoursesRecords.length > 0) {
+          await coursesIndex.saveObjects(algoliaCoursesRecords);
+          console.log(`   ✅ ${algoliaCoursesRecords.length} courses synced to Algolia`);
+        }
+        if (algoliaJobsRecords.length > 0) {
+          await jobsIndex.saveObjects(algoliaJobsRecords);
+          console.log(`   ✅ ${algoliaJobsRecords.length} jobs synced to Algolia`);
+        }
+        
+        // Configure Algolia indices
+        await coursesIndex.setSettings({
+          searchableAttributes: ['name', 'description', 'institutionName', 'field', 'level', 'location'],
+          attributesForFaceting: ['field', 'level', 'location', 'status', 'institutionName'],
+          ranking: ['desc(createdAt)', 'typo', 'geo', 'words', 'filters', 'proximity', 'attribute', 'exact', 'custom'],
+        });
+        
+        await jobsIndex.setSettings({
+          searchableAttributes: ['title', 'description', 'companyName', 'type', 'location', 'skills'],
+          attributesForFaceting: ['type', 'location', 'experienceLevel', 'status', 'companyName'],
+          ranking: ['desc(createdAt)', 'typo', 'geo', 'words', 'filters', 'proximity', 'attribute', 'exact', 'custom'],
+        });
+        
+        console.log("   ✅ Algolia index settings configured\n");
+      } catch (algoliaError) {
+        console.error("   ⚠️ Algolia sync failed:", algoliaError.message);
+      }
+    }
+
+    // Seed applications
+    console.log("📋 Seeding applications...");
+    const applicationsRef = db.collection("applications");
+    for (const application of demoData.applications) {
+      await applicationsRef.add(application);
+    }
+    console.log(
+      `✅ ${demoData.applications.length}/${demoData.applications.length} applications created\n`
+    );
+
+    // Seed admissions
+    console.log("✅ Seeding admissions...");
+    const admissionsRef = db.collection("admissions");
+    for (const admission of demoData.admissions) {
+      await admissionsRef.add(admission);
+    }
+    console.log(
+      `✅ ${demoData.admissions.length}/${demoData.admissions.length} admissions created\n`
+    );
+
     console.log("=====================================");
-    console.log(`\n🔐 ADMIN ACCOUNT:`);
+    console.log("✅ Database seeding completed successfully!\n");
+
+    // Print credentials
+    console.log("📝 Demo Account Credentials:");
+    console.log("=====================================\n");
+
+    console.log("🔐 ADMIN ACCOUNT:");
     console.log(`   Email: ${demoData.adminUser.email}`);
-    console.log(`   Password: ${demoData.adminUser.password}`);
-    console.log(`\n👨‍🎓 STUDENT ACCOUNTS:`);
-    demoData.students.forEach((student) => {
+    console.log(`   Password: ${demoData.adminUser.password}\n`);
+
+    console.log("👨‍🎓 STUDENT ACCOUNTS:");
+    for (const student of demoData.students) {
       console.log(`   Email: ${student.email}`);
       console.log(`   Password: ${student.password}`);
       console.log(`   Name: ${student.displayName}\n`);
-    });
-    console.log(`🏫 INSTITUTION ACCOUNTS:`);
-    demoData.institutions.forEach((institution) => {
-      console.log(`   Email: ${institution.email}`);
-      console.log(`   Password: ${institution.password}`);
-      console.log(`   Name: ${institution.displayName}\n`);
-    });
-    console.log(`🏢 COMPANY ACCOUNTS:`);
-    demoData.companies.forEach((company) => {
+    }
+
+    console.log("🏫 INSTITUTION ACCOUNTS:");
+    for (const inst of demoData.institutions) {
+      console.log(`   Email: ${inst.email}`);
+      console.log(`   Password: ${inst.password}`);
+      console.log(`   Name: ${inst.institutionName}\n`);
+    }
+
+    console.log("🏢 COMPANY ACCOUNTS:");
+    for (const company of demoData.companies) {
       console.log(`   Email: ${company.email}`);
       console.log(`   Password: ${company.password}`);
-      console.log(`   Name: ${company.displayName}\n`);
-    });
+      console.log(`   Name: ${company.companyName}\n`);
+    }
   } catch (error) {
     console.error("❌ Error seeding database:", error);
     process.exit(1);

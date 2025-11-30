@@ -17,6 +17,10 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+  Fade,
+  Zoom,
+  Grow,
+  Slide,
 } from "@mui/material";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
@@ -30,6 +34,8 @@ import {
   Delete,
   Edit,
   CalendarToday,
+  CalendarMonth,
+  Schedule,
 } from "@mui/icons-material";
 import {
   collection,
@@ -61,20 +67,33 @@ export default function CalendarPage() {
       where("participantIds", "array-contains", user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsData = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        eventsData.push({
-          id: docSnap.id,
-          title: data.title,
-          start: data.startTime.toDate(),
-          end: data.endTime.toDate(),
-          ...data,
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const eventsData = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          // Handle potential missing or invalid dates
+          const startTime =
+            data.startTime?.toDate?.() || data.start?.toDate?.() || new Date();
+          const endTime =
+            data.endTime?.toDate?.() || data.end?.toDate?.() || new Date();
+          eventsData.push({
+            id: docSnap.id,
+            title: data.title || "Untitled Event",
+            start: startTime,
+            end: endTime,
+            ...data,
+          });
         });
-      });
-      setEvents(eventsData);
-    });
+        setEvents(eventsData);
+      },
+      (error) => {
+        console.error("Error fetching events:", error);
+        // If there's an error, just set empty events
+        setEvents([]);
+      }
+    );
 
     return () => unsubscribe();
   }, [user?.uid]);
@@ -193,313 +212,565 @@ export default function CalendarPage() {
     .slice(0, 5);
 
   return (
-    <Box className="min-vh-100" bgcolor="background.default">
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-        >
-          <Typography variant="h4" fontWeight={700}>
-            My Calendar
-          </Typography>
-          <Box display="flex" gap={1}>
-            <Chip
-              icon={<EventIcon />}
-              label={`${events.length} Events`}
-              color="primary"
-              variant="outlined"
-            />
-          </Box>
-        </Box>
-
-        <div className="row g-3">
-          {/* Upcoming Events */}
-          <div className="col-12 col-lg-3">
-            <Card>
-              <CardContent>
-                <Typography variant="h6" fontWeight={600} gutterBottom>
-                  Upcoming Events
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                {upcomingEvents.length === 0 ? (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    textAlign="center"
-                    py={2}
-                  >
-                    No upcoming events
-                  </Typography>
-                ) : (
-                  <List dense disablePadding>
-                    {upcomingEvents.map((event) => (
-                      <ListItem
-                        key={event.id}
-                        button
-                        onClick={() => handleSelectEvent(event)}
-                        sx={{ borderRadius: 1, mb: 1 }}
+    <Fade in timeout={600}>
+      <Box className="min-vh-100" bgcolor="background.default">
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          {/* Animated Header */}
+          <Zoom in timeout={500}>
+            <Box
+              sx={{
+                background: "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
+                borderRadius: 4,
+                p: 4,
+                mb: 4,
+                color: "white",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -50,
+                  right: -50,
+                  width: 200,
+                  height: 200,
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.1)",
+                }}
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: -30,
+                  left: "30%",
+                  width: 100,
+                  height: 100,
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.05)",
+                }}
+              />
+              <Box sx={{ position: "relative", zIndex: 1 }}>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  flexWrap="wrap"
+                  gap={2}
+                >
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        background: "rgba(255,255,255,0.2)",
+                        backdropFilter: "blur(10px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <CalendarMonth sx={{ fontSize: 32 }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h4" fontWeight={700}>
+                        My Calendar
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ opacity: 0.9, mt: 0.5 }}
                       >
-                        <ListItemIcon>
-                          <EventIcon fontSize="small" color="primary" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={event.title}
-                          secondary={moment(event.start).format(
-                            "MMM D, h:mm a"
-                          )}
-                          primaryTypographyProps={{
-                            variant: "body2",
-                            fontWeight: 600,
-                          }}
-                          secondaryTypographyProps={{ variant: "caption" }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Legend */}
-            <Card sx={{ mt: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Event Types
-                </Typography>
-                <Box display="flex" flexDirection="column" gap={1} mt={2}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        bgcolor: "#f50057",
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Typography variant="caption">Interview</Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        bgcolor: "#3f51b5",
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Typography variant="caption">Meeting</Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        bgcolor: "#ff9800",
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Typography variant="caption">Deadline</Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        bgcolor: "#3174ad",
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Typography variant="caption">Other</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Calendar */}
-          <div className="col-12 col-lg-9">
-            <Card>
-              <CardContent>
-                <Box sx={{ height: 700 }}>
-                  <Calendar
-                    localizer={localizer}
-                    events={events}
-                    startAccessor="start"
-                    endAccessor="end"
-                    onSelectEvent={handleSelectEvent}
-                    eventPropGetter={eventStyleGetter}
-                    views={["month", "week", "day", "agenda"]}
-                    defaultView="month"
-                    style={{ height: "100%" }}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Container>
-
-      {/* Event Details Dialog */}
-      <Dialog
-        open={showEventDialog}
-        onClose={() => setShowEventDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <EventIcon />
-              Event Details
-            </Box>
-            <IconButton onClick={() => setShowEventDialog(false)} size="small">
-              <Close />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {selectedEvent && (
-            <Box display="flex" flexDirection="column" gap={2}>
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  {selectedEvent.title}
-                </Typography>
-                <Chip
-                  label={selectedEvent.type || "other"}
-                  size="small"
-                  color="primary"
-                  sx={{ textTransform: "capitalize" }}
-                />
-                {selectedEvent.status && (
-                  <Chip
-                    label={selectedEvent.status}
-                    size="small"
-                    color={getStatusColor(selectedEvent.status)}
-                    sx={{ ml: 1, textTransform: "capitalize" }}
-                  />
-                )}
-              </Box>
-
-              <Divider />
-
-              <Box display="flex" alignItems="center" gap={1}>
-                <CalendarToday fontSize="small" color="action" />
-                <Typography variant="body2">
-                  {moment(selectedEvent.start).format("MMMM Do YYYY, h:mm a")} -{" "}
-                  {moment(selectedEvent.end).format("h:mm a")}
-                </Typography>
-              </Box>
-
-              {selectedEvent.description && (
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                    Description
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedEvent.description}
-                  </Typography>
-                </Box>
-              )}
-
-              {selectedEvent.location && (
-                <Box display="flex" alignItems="center" gap={1}>
-                  <LocationOn fontSize="small" color="action" />
-                  <Typography variant="body2">
-                    {selectedEvent.location}
-                  </Typography>
-                </Box>
-              )}
-
-              {selectedEvent.meetingLink && (
-                <Box display="flex" alignItems="center" gap={1}>
-                  <VideoCall fontSize="small" color="action" />
-                  <Button
-                    size="small"
-                    href={selectedEvent.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Join Meeting
-                  </Button>
-                </Box>
-              )}
-
-              {selectedEvent.participantNames &&
-                selectedEvent.participantNames.length > 0 && (
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                      <People fontSize="small" color="action" />
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        Participants
+                        Manage your interviews, meetings, and deadlines
                       </Typography>
                     </Box>
-                    {selectedEvent.participantNames.map((name, index) => (
-                      <Chip
-                        key={index}
-                        label={name}
-                        size="small"
-                        sx={{ mr: 0.5, mb: 0.5 }}
+                  </Box>
+                  <Chip
+                    icon={<EventIcon sx={{ color: "white !important" }} />}
+                    label={`${events.length} Events`}
+                    sx={{
+                      bgcolor: "rgba(255,255,255,0.2)",
+                      color: "white",
+                      fontWeight: 600,
+                      backdropFilter: "blur(10px)",
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          </Zoom>
+
+          <div className="row g-3">
+            {/* Upcoming Events */}
+            <div className="col-12 col-lg-3">
+              <Slide direction="right" in timeout={600}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "&:hover": {
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+                      transform: "translateY(-2px)",
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <Schedule color="primary" />
+                      <Typography variant="h6" fontWeight={600}>
+                        Upcoming Events
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+                    {upcomingEvents.length === 0 ? (
+                      <Fade in timeout={500}>
+                        <Box py={4} textAlign="center">
+                          <EventIcon
+                            sx={{ fontSize: 48, color: "grey.300", mb: 2 }}
+                          />
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            fontWeight={500}
+                          >
+                            No upcoming events
+                          </Typography>
+                        </Box>
+                      </Fade>
+                    ) : (
+                      <List dense disablePadding>
+                        {upcomingEvents.map((event, index) => (
+                          <Grow in timeout={300 + index * 100} key={event.id}>
+                            <ListItem
+                              button
+                              onClick={() => handleSelectEvent(event)}
+                              sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                bgcolor: "rgba(37,99,235,0.04)",
+                                transition: "all 0.2s ease",
+                                "&:hover": {
+                                  bgcolor: "rgba(37,99,235,0.1)",
+                                  transform: "translateX(4px)",
+                                },
+                              }}
+                            >
+                              <ListItemIcon>
+                                <Box
+                                  sx={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 2,
+                                    background:
+                                      "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <EventIcon
+                                    fontSize="small"
+                                    sx={{ color: "white" }}
+                                  />
+                                </Box>
+                              </ListItemIcon>
+                              <ListItemText
+                                primary={event.title}
+                                secondary={moment(event.start).format(
+                                  "MMM D, h:mm a"
+                                )}
+                                primaryTypographyProps={{
+                                  variant: "body2",
+                                  fontWeight: 600,
+                                }}
+                                secondaryTypographyProps={{
+                                  variant: "caption",
+                                }}
+                              />
+                            </ListItem>
+                          </Grow>
+                        ))}
+                      </List>
+                    )}
+                  </CardContent>
+                </Card>
+              </Slide>
+
+              {/* Legend */}
+              <Slide direction="right" in timeout={700}>
+                <Card
+                  sx={{
+                    mt: 2,
+                    borderRadius: 3,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "&:hover": {
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      Event Types
+                    </Typography>
+                    <Box display="flex" flexDirection="column" gap={1.5} mt={2}>
+                      {[
+                        { color: "#f50057", label: "Interview" },
+                        { color: "#3f51b5", label: "Meeting" },
+                        { color: "#ff9800", label: "Deadline" },
+                        { color: "#3174ad", label: "Other" },
+                      ].map((item, index) => (
+                        <Fade in timeout={400 + index * 100} key={item.label}>
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1.5}
+                            sx={{
+                              p: 1,
+                              borderRadius: 1.5,
+                              transition: "all 0.2s ease",
+                              "&:hover": {
+                                bgcolor: "grey.100",
+                              },
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                bgcolor: item.color,
+                                borderRadius: 1,
+                                boxShadow: `0 2px 6px ${item.color}40`,
+                              }}
+                            />
+                            <Typography variant="body2" fontWeight={500}>
+                              {item.label}
+                            </Typography>
+                          </Box>
+                        </Fade>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Slide>
+            </div>
+
+            {/* Calendar */}
+            <div className="col-12 col-lg-9">
+              <Grow in timeout={700}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box
+                      sx={{
+                        height: 700,
+                        "& .rbc-calendar": {
+                          fontFamily: "inherit",
+                        },
+                        "& .rbc-header": {
+                          padding: "12px 8px",
+                          fontWeight: 600,
+                          background:
+                            "linear-gradient(180deg, rgba(37,99,235,0.05) 0%, transparent 100%)",
+                        },
+                        "& .rbc-today": {
+                          bgcolor: "rgba(37,99,235,0.08)",
+                        },
+                        "& .rbc-selected": {
+                          bgcolor: "primary.main !important",
+                        },
+                        "& .rbc-toolbar button": {
+                          borderRadius: "8px !important",
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            bgcolor: "rgba(37,99,235,0.1) !important",
+                          },
+                          "&.rbc-active": {
+                            background:
+                              "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%) !important",
+                            color: "white !important",
+                          },
+                        },
+                        "& .rbc-event": {
+                          borderRadius: "8px !important",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            transform: "scale(1.02)",
+                            boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+                          },
+                        },
+                        "& .rbc-month-view": {
+                          borderRadius: 2,
+                          overflow: "hidden",
+                        },
+                      }}
+                    >
+                      <Calendar
+                        localizer={localizer}
+                        events={events}
+                        startAccessor="start"
+                        endAccessor="end"
+                        onSelectEvent={handleSelectEvent}
+                        eventPropGetter={eventStyleGetter}
+                        views={["month", "week", "day", "agenda"]}
+                        defaultView="month"
+                        style={{ height: "100%" }}
                       />
-                    ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grow>
+            </div>
+          </div>
+        </Container>
+
+        {/* Event Details Dialog */}
+        <Dialog
+          open={showEventDialog}
+          onClose={() => setShowEventDialog(false)}
+          maxWidth="sm"
+          fullWidth
+          TransitionComponent={Zoom}
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              background: "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
+              color: "white",
+              py: 2,
+            }}
+          >
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <EventIcon />
+                <Typography variant="h6" fontWeight={600}>
+                  Event Details
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={() => setShowEventDialog(false)}
+                size="small"
+                sx={{ color: "white" }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+            {selectedEvent && (
+              <Box display="flex" flexDirection="column" gap={2}>
+                <Box>
+                  <Typography variant="h6" gutterBottom fontWeight={600}>
+                    {selectedEvent.title}
+                  </Typography>
+                  <Box display="flex" gap={1} flexWrap="wrap">
+                    <Chip
+                      label={selectedEvent.type || "other"}
+                      size="small"
+                      sx={{
+                        textTransform: "capitalize",
+                        background:
+                          "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
+                        color: "white",
+                        fontWeight: 600,
+                      }}
+                    />
+                    {selectedEvent.status && (
+                      <Chip
+                        label={selectedEvent.status}
+                        size="small"
+                        color={getStatusColor(selectedEvent.status)}
+                        sx={{ textTransform: "capitalize", fontWeight: 600 }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+
+                <Divider />
+
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={1.5}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: "grey.50",
+                    borderRadius: 2,
+                  }}
+                >
+                  <CalendarToday fontSize="small" color="primary" />
+                  <Typography variant="body2" fontWeight={500}>
+                    {moment(selectedEvent.start).format("MMMM Do YYYY, h:mm a")}{" "}
+                    - {moment(selectedEvent.end).format("h:mm a")}
+                  </Typography>
+                </Box>
+
+                {selectedEvent.description && (
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      gutterBottom
+                    >
+                      Description
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedEvent.description}
+                    </Typography>
                   </Box>
                 )}
 
-              <Box display="flex" gap={1} mt={2}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => exportToGoogleCalendar(selectedEvent)}
-                  fullWidth
-                >
-                  Add to Google Calendar
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => exportToICS(selectedEvent)}
-                  fullWidth
-                >
-                  Export .ICS
-                </Button>
+                {selectedEvent.location && (
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={1.5}
+                    sx={{ p: 1.5, bgcolor: "grey.50", borderRadius: 2 }}
+                  >
+                    <LocationOn fontSize="small" color="primary" />
+                    <Typography variant="body2" fontWeight={500}>
+                      {selectedEvent.location}
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedEvent.meetingLink && (
+                  <Box display="flex" alignItems="center" gap={1.5}>
+                    <VideoCall fontSize="small" color="primary" />
+                    <Button
+                      size="small"
+                      href={selectedEvent.meetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="contained"
+                      sx={{
+                        background:
+                          "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
+                        textTransform: "none",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Join Meeting
+                    </Button>
+                  </Box>
+                )}
+
+                {selectedEvent.participantNames &&
+                  selectedEvent.participantNames.length > 0 && (
+                    <Box>
+                      <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        <People fontSize="small" color="primary" />
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          Participants
+                        </Typography>
+                      </Box>
+                      {selectedEvent.participantNames.map((name, index) => (
+                        <Chip
+                          key={index}
+                          label={name}
+                          size="small"
+                          sx={{
+                            mr: 0.5,
+                            mb: 0.5,
+                            fontWeight: 500,
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+
+                <Box display="flex" gap={1} mt={2}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => exportToGoogleCalendar(selectedEvent)}
+                    fullWidth
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Add to Google Calendar
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => exportToICS(selectedEvent)}
+                    fullWidth
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Export .ICS
+                  </Button>
+                </Box>
               </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {selectedEvent?.createdBy === user?.uid && (
-            <>
-              <Button
-                startIcon={<Delete />}
-                color="error"
-                onClick={handleDeleteEvent}
-              >
-                Delete
-              </Button>
-              <Box flexGrow={1} />
-            </>
-          )}
-          {selectedEvent?.status === "scheduled" && (
-            <>
-              <Button onClick={() => handleUpdateStatus("completed")}>
-                Mark Completed
-              </Button>
-              <Button
-                onClick={() => handleUpdateStatus("cancelled")}
-                color="error"
-              >
-                Cancel Event
-              </Button>
-            </>
-          )}
-          <Button onClick={() => setShowEventDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2, pt: 0 }}>
+            {selectedEvent?.createdBy === user?.uid && (
+              <>
+                <Button
+                  startIcon={<Delete />}
+                  color="error"
+                  onClick={handleDeleteEvent}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Delete
+                </Button>
+                <Box flexGrow={1} />
+              </>
+            )}
+            {selectedEvent?.status === "scheduled" && (
+              <>
+                <Button
+                  onClick={() => handleUpdateStatus("completed")}
+                  variant="contained"
+                  color="success"
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Mark Completed
+                </Button>
+                <Button
+                  onClick={() => handleUpdateStatus("cancelled")}
+                  color="error"
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Cancel Event
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={() => setShowEventDialog(false)}
+              sx={{ textTransform: "none", fontWeight: 600 }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </Fade>
   );
 }

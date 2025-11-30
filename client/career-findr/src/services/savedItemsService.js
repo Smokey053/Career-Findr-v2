@@ -5,9 +5,6 @@ import {
   where,
   getDocs,
   writeBatch,
-  doc,
-  getDoc,
-  deleteDoc,
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -65,34 +62,31 @@ export const getSavedItems = async (userId) => {
   return { jobs, courses };
 };
 
-export const removeSavedItem = async (userId, type, itemId) => {
-  if (!userId || !type || !itemId) {
-    throw new Error("Missing required parameters to remove saved item");
+// Unsave/remove an item - main function
+export const unsaveItem = async (userId, itemId, itemType) => {
+  if (!userId || !itemId || !itemType) {
+    throw new Error("User ID, item ID, and item type are required");
   }
 
   const savedRef = collection(db, "savedItems");
   const savedQuery = query(
     savedRef,
     where("userId", "==", userId),
-    where("type", "==", type),
-    where("itemId", "==", itemId)
+    where("itemId", "==", itemId),
+    where("type", "==", itemType)
   );
 
   const snapshot = await getDocs(savedQuery);
-
   if (!snapshot.empty) {
     const batch = writeBatch(db);
     snapshot.forEach((docSnap) => batch.delete(docSnap.ref));
     await batch.commit();
-    return;
   }
+};
 
-  // Fallback: try deleting by document id if itemId was stored as document key
-  const docRef = doc(savedRef, itemId);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    await deleteDoc(docRef);
-  }
+// Alias for backward compatibility
+export const removeSavedItem = async (userId, type, itemId) => {
+  return unsaveItem(userId, itemId, type);
 };
 
 // Save an item (job or course)
@@ -123,28 +117,6 @@ export const saveItem = async (userId, itemData) => {
     itemData: itemData.itemData || {},
     savedAt: serverTimestamp(),
   });
-};
-
-// Unsave an item
-export const unsaveItem = async (userId, itemId, itemType) => {
-  if (!userId || !itemId || !itemType) {
-    throw new Error("User ID, item ID, and item type are required");
-  }
-
-  const savedRef = collection(db, "savedItems");
-  const savedQuery = query(
-    savedRef,
-    where("userId", "==", userId),
-    where("itemId", "==", itemId),
-    where("type", "==", itemType)
-  );
-
-  const snapshot = await getDocs(savedQuery);
-  if (!snapshot.empty) {
-    const batch = writeBatch(db);
-    snapshot.forEach((docSnap) => batch.delete(docSnap.ref));
-    await batch.commit();
-  }
 };
 
 // Check if an item is saved

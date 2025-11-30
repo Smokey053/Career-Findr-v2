@@ -16,11 +16,19 @@ export const validateRegistration = [
 ];
 
 export const validateLogin = [
+  body("idToken")
+    .optional()
+    .isString()
+    .withMessage("ID token must be a string"),
   body("email")
+    .if((value, { req }) => !req.body.idToken)
     .isEmail()
     .normalizeEmail()
     .withMessage("Valid email is required"),
-  body("password").notEmpty().withMessage("Password is required"),
+  body("password")
+    .if((value, { req }) => !req.body.idToken)
+    .notEmpty()
+    .withMessage("Password is required"),
 ];
 
 // Student validation

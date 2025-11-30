@@ -35,18 +35,6 @@ export const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Check approval status for companies/institutes
-    if (
-      (userData.role === "company" || userData.role === "institute") &&
-      !userData.isApproved
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Your account is pending admin approval. You will be notified via email once approved.",
-      });
-    }
-
     // Attach user info to request
     req.user = {
       uid: decoded.uid,

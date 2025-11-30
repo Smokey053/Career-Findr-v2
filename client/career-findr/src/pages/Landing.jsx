@@ -7,7 +7,8 @@ import {
   Button,
   Grid,
   Card,
-  CardContent,
+  Stack,
+  Paper,
   AppBar,
   Toolbar,
   useTheme,
@@ -158,7 +159,14 @@ export default function Landing() {
           <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
             <Grid item xs={12} md={6}>
               <Fade in timeout={800}>
-                <Box>
+                <Box
+                  sx={{
+                    textAlign: { xs: "center", md: "left" },
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: { xs: "center", md: "flex-start" },
+                  }}
+                >
                   <Typography
                     variant="h1"
                     gutterBottom
@@ -191,6 +199,7 @@ export default function Landing() {
                     paragraph
                     sx={{
                       mb: 4,
+                      maxWidth: 540,
                       fontSize: { xs: "1rem", sm: "1.15rem", md: "1.25rem" },
                     }}
                   >
@@ -198,20 +207,16 @@ export default function Landing() {
                     applications, admissions, and job placements all in one
                     platform.
                   </Typography>
-                  <Box
-                    display="flex"
-                    gap={2}
-                    flexWrap="wrap"
-                    sx={{
-                      flexDirection: { xs: "column", sm: "row" },
-                    }}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2}
+                    sx={{ width: "100%", maxWidth: 520 }}
                   >
                     <Button
                       variant="contained"
                       size="large"
                       endIcon={<ArrowForward />}
                       onClick={() => navigate("/signup")}
-                      fullWidth={window.innerWidth < 600}
                       sx={{
                         transition: "all 0.3s ease",
                         py: { xs: 1.5, sm: 1.75 },
@@ -227,7 +232,6 @@ export default function Landing() {
                       variant="outlined"
                       size="large"
                       onClick={() => navigate("/login")}
-                      fullWidth={window.innerWidth < 600}
                       sx={{
                         py: { xs: 1.5, sm: 1.75 },
                         transition: "all 0.3s ease",
@@ -242,17 +246,14 @@ export default function Landing() {
                     >
                       Sign In
                     </Button>
-                  </Box>
+                  </Stack>
 
                   {/* Trust indicators */}
-                  <Box
-                    display="flex"
-                    gap={{ xs: 2, sm: 3 }}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2.5}
                     mt={4}
-                    flexWrap="wrap"
-                    sx={{
-                      flexDirection: { xs: "column", sm: "row" },
-                    }}
+                    alignItems={{ xs: "center", sm: "flex-start" }}
                   >
                     <Zoom in timeout={1000}>
                       <Box display="flex" alignItems="center">
@@ -282,56 +283,126 @@ export default function Landing() {
                         </Typography>
                       </Box>
                     </Zoom>
-                  </Box>
+                  </Stack>
                 </Box>
               </Fade>
             </Grid>
 
             <Grid item xs={12} md={6}>
               <Slide direction="left" in timeout={1000}>
-                <Box
-                  sx={{
-                    width: "100%",
-                    height: { xs: 300, sm: 350, md: 400 },
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    borderRadius: 4,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    boxShadow: theme.shadows[20],
-                    position: "relative",
-                    overflow: "hidden",
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      width: "200%",
-                      height: "200%",
-                      background: `radial-gradient(circle, ${alpha(
-                        "#fff",
-                        0.1
-                      )} 0%, transparent 70%)`,
-                      animation: "rotate 20s linear infinite",
-                    },
-                    "@keyframes rotate": {
-                      "0%": { transform: "rotate(0deg)" },
-                      "100%": { transform: "rotate(360deg)" },
-                    },
-                  }}
-                >
-                  <Typography
-                    variant="h3"
-                    fontWeight={700}
+                <Box sx={{ width: "100%", maxWidth: 520, mx: "auto" }}>
+                  <Paper
+                    elevation={0}
                     sx={{
+                      p: { xs: 4, sm: 5 },
+                      borderRadius: 5,
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                      color: "white",
                       position: "relative",
-                      zIndex: 1,
-                      fontSize: { xs: "1.75rem", sm: "2.25rem", md: "3rem" },
+                      overflow: "hidden",
                       textAlign: "center",
-                      px: 2,
+                      boxShadow: `0 30px 60px ${alpha(
+                        theme.palette.primary.main,
+                        0.35
+                      )}`,
+                      "&::after": {
+                        content: '""',
+                        position: "absolute",
+                        inset: 0,
+                        background: `linear-gradient(180deg, ${alpha(
+                          "#fff",
+                          0.15
+                        )} 0%, transparent 60%)`,
+                        opacity: 0.7,
+                      },
                     }}
                   >
-                    🚀 Launch Your Future
-                  </Typography>
+                    <Box position="relative" zIndex={1}>
+                      <Typography
+                        variant="overline"
+                        sx={{
+                          letterSpacing: 2,
+                          fontWeight: 700,
+                          opacity: 0.9,
+                        }}
+                      >
+                        2025 Admissions
+                      </Typography>
+                      <Typography
+                        variant="h3"
+                        fontWeight={800}
+                        sx={{
+                          mt: 1,
+                          mb: 2,
+                          fontSize: { xs: "2rem", md: "2.75rem" },
+                        }}
+                      >
+                        Launch Your Future
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          opacity: 0.9,
+                          mb: 3,
+                          fontSize: { xs: "1rem", md: "1.1rem" },
+                        }}
+                      >
+                        Tailored journeys for students, institutions, and
+                        companies ready to grow.
+                      </Typography>
+
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={2}
+                        justifyContent="center"
+                        sx={{ mb: 3 }}
+                      >
+                        {[
+                          { label: "Active Institutions", value: "500+" },
+                          { label: "Career Matches", value: "5K" },
+                        ].map((item) => (
+                          <Box
+                            key={item.label}
+                            sx={{
+                              px: 3,
+                              py: 2,
+                              borderRadius: 3,
+                              backgroundColor: alpha("#fff", 0.12),
+                            }}
+                          >
+                            <Typography variant="h5" fontWeight={700}>
+                              {item.value}
+                            </Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                              {item.label}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+
+                      <Button
+                        variant="contained"
+                        color="inherit"
+                        endIcon={<ArrowForward />}
+                        onClick={() => navigate("/signup")}
+                        sx={{
+                          bgcolor: alpha("#fff", 0.2),
+                          color: "white",
+                          borderRadius: 999,
+                          px: 4,
+                          py: 1.25,
+                          fontWeight: 600,
+                          backdropFilter: "blur(6px)",
+                          "&:hover": {
+                            bgcolor: alpha("#fff", 0.3),
+                            transform: "translateY(-2px)",
+                          },
+                        }}
+                      >
+                        Explore Programs
+                      </Button>
+                    </Box>
+                  </Paper>
                 </Box>
               </Slide>
             </Grid>
@@ -409,87 +480,68 @@ export default function Landing() {
           </Box>
         </Fade>
 
-        <Grid container spacing={{ xs: 3, sm: 4 }}>
+        <Stack spacing={{ xs: 3, md: 4 }} alignItems="center">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Zoom in timeout={800 + index * 200}>
-                  <Card
+              <Zoom in timeout={800 + index * 200} key={feature.title}>
+                <Card
+                  sx={{
+                    width: "100%",
+                    maxWidth: 920,
+                    borderRadius: 4,
+                    boxShadow: theme.shadows[10],
+                    p: { xs: 3, md: 4 },
+                    display: "flex",
+                    flexDirection: { xs: "column", md: "row" },
+                    alignItems: "center",
+                    gap: { xs: 3, md: 4 },
+                    minHeight: 220,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                    backgroundColor: alpha(
+                      theme.palette.background.paper,
+                      0.95
+                    ),
+                  }}
+                >
+                  <Box
                     sx={{
-                      minHeight: 280,
-                      height: "100%",
-                      textAlign: "center",
-                      p: { xs: 2, sm: 3 },
+                      width: 88,
+                      height: 88,
+                      borderRadius: 3,
+                      background: alpha(theme.palette.primary.main, 0.1),
                       display: "flex",
-                      flexDirection: "column",
+                      alignItems: "center",
                       justifyContent: "center",
-                      transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                      "&:hover": {
-                        transform: "translateY(-12px)",
-                        boxShadow: theme.shadows[16],
-                        "& .feature-icon": {
-                          transform: "scale(1.1) rotate(5deg)",
-                          backgroundColor: alpha(
-                            theme.palette.primary.main,
-                            0.2
-                          ),
-                        },
-                      },
+                      flexShrink: 0,
                     }}
                   >
-                    <CardContent
+                    <Icon sx={{ fontSize: 42, color: "primary.main" }} />
+                  </Box>
+                  <Box textAlign={{ xs: "center", md: "left" }}>
+                    <Typography
+                      variant="h5"
+                      fontWeight={700}
+                      sx={{ mb: 1, fontSize: { xs: "1.35rem", md: "1.5rem" } }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      color="text.secondary"
                       sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 2,
-                        height: "100%",
+                        fontSize: { xs: "1rem", md: "1.05rem" },
+                        maxWidth: 720,
                       }}
                     >
-                      <Box
-                        className="feature-icon"
-                        sx={{
-                          display: "inline-flex",
-                          p: 2,
-                          borderRadius: 2,
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          mb: 2,
-                          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                        }}
-                      >
-                        <Icon
-                          sx={{
-                            fontSize: { xs: 32, sm: 40 },
-                            color: "primary.main",
-                          }}
-                        />
-                      </Box>
-                      <Typography
-                        variant="h5"
-                        gutterBottom
-                        fontWeight={600}
-                        sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-                      >
-                        {feature.title}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          fontSize: { xs: "0.875rem", sm: "1rem" },
-                          flexGrow: 1,
-                        }}
-                      >
-                        {feature.description}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Zoom>
-              </Grid>
+                      {feature.description}
+                    </Typography>
+                  </Box>
+                </Card>
+              </Zoom>
             );
           })}
-        </Grid>
+        </Stack>
       </Container>
 
       {/* CTA Section */}
@@ -531,11 +583,12 @@ export default function Landing() {
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: "white",
-                  color: "primary.main",
+                  background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.main} 100%)`,
+                  color: "white",
+                  fontWeight: 700,
+                  px: 5,
                   transition: "all 0.3s ease",
                   "&:hover": {
-                    bgcolor: "grey.100",
                     transform: "translateY(-4px)",
                     boxShadow: `0 12px 24px ${alpha("#000", 0.2)}`,
                   },

@@ -23,7 +23,7 @@ import TermsOfService from "./pages/TermsOfService";
 // Student Pages
 import StudentDashboard from "./pages/student/StudentDashboard";
 import CourseSearch from "./pages/student/CourseSearch";
-import CourseDetails from "./pages/student/CourseDetails";
+import StudentCourseDetails from "./pages/student/CourseDetails";
 import MyApplications from "./pages/student/MyApplications";
 import ApplicationForm from "./pages/student/ApplicationForm";
 import JobBoard from "./pages/student/JobBoard";
@@ -34,13 +34,16 @@ import JobApplicationForm from "./pages/student/JobApplicationForm";
 import InstituteDashboard from "./pages/institute/InstituteDashboard";
 import CourseManagement from "./pages/institute/CourseManagement";
 import CourseForm from "./pages/institute/CourseForm";
+import InstituteCourseDetails from "./pages/institute/CourseDetails";
 import ApplicationReview from "./pages/institute/ApplicationReview";
+import AdmissionsManagement from "./pages/institute/AdmissionsManagement";
 import FacultyManagement from "./pages/institute/FacultyManagement";
 
 // Company Pages
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import JobManagement from "./pages/company/JobManagement";
 import JobForm from "./pages/company/JobForm";
+import CompanyJobDetails from "./pages/company/CompanyJobDetails";
 import ApplicantReview from "./pages/company/ApplicantReview";
 import CandidateSearch from "./pages/company/CandidateSearch";
 
@@ -85,7 +88,10 @@ function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route
+                      path="/forgot-password"
+                      element={<ForgotPassword />}
+                    />
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -115,7 +121,7 @@ function App() {
                       element={
                         <ProtectedRoute allowedRoles={["student"]}>
                           <Navbar />
-                          <CourseDetails />
+                          <StudentCourseDetails />
                         </ProtectedRoute>
                       }
                     />
@@ -185,6 +191,15 @@ function App() {
                       }
                     />
                     <Route
+                      path="/institute/courses/:courseId"
+                      element={
+                        <ProtectedRoute allowedRoles={["institute"]}>
+                          <Navbar />
+                          <InstituteCourseDetails />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
                       path="/institute/faculties"
                       element={
                         <ProtectedRoute allowedRoles={["institute"]}>
@@ -217,6 +232,15 @@ function App() {
                         <ProtectedRoute allowedRoles={["institute"]}>
                           <Navbar />
                           <ApplicationReview />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/institute/admissions"
+                      element={
+                        <ProtectedRoute allowedRoles={["institute"]}>
+                          <Navbar />
+                          <AdmissionsManagement />
                         </ProtectedRoute>
                       }
                     />
@@ -255,6 +279,15 @@ function App() {
                         <ProtectedRoute allowedRoles={["company"]}>
                           <Navbar />
                           <JobForm />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/company/jobs/:jobId"
+                      element={
+                        <ProtectedRoute allowedRoles={["company"]}>
+                          <Navbar />
+                          <CompanyJobDetails />
                         </ProtectedRoute>
                       }
                     />

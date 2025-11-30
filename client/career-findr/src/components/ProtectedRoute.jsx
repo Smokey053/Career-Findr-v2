@@ -14,15 +14,25 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  // If user has no role defined, redirect to login
+  if (!user.role) {
+    console.warn("User has no role defined:", user);
+    return <Navigate to="/login" replace />;
+  }
+
+  // Normalize role for comparison (case-insensitive)
+  const userRole = user.role.toLowerCase().trim();
+  const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase().trim());
+
+  if (normalizedAllowedRoles.length > 0 && !normalizedAllowedRoles.includes(userRole)) {
     // Redirect to appropriate dashboard based on user's role
-    if (user.role === "student")
+    if (userRole === "student")
       return <Navigate to="/dashboard/student" replace />;
-    if (user.role === "institute")
+    if (userRole === "institute")
       return <Navigate to="/dashboard/institute" replace />;
-    if (user.role === "company")
+    if (userRole === "company")
       return <Navigate to="/dashboard/company" replace />;
-    if (user.role === "admin")
+    if (userRole === "admin")
       return <Navigate to="/dashboard/admin" replace />;
     return <Navigate to="/" replace />;
   }

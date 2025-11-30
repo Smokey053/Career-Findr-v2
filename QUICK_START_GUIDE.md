@@ -9,8 +9,8 @@
 ### 🔐 Admin
 
 ```
-Email: admin@careerfinder.com
-Password: Admin@123456
+Email: admin@careerfindr.com
+Password: admin123
 ```
 
 ### 👨‍🎓 Student (Choose Any)
@@ -119,7 +119,7 @@ Password: Company@123456
 
 ### Workflow 4: Admin Management
 
-1. Login as admin (admin@careerfinder.com)
+1. Login as admin (admin@careerfindr.com)
 2. Access admin dashboard
 3. View all users and statistics
 4. Manage user verification
@@ -159,13 +159,13 @@ Password: Company@123456
 
 ## Troubleshooting
 
-| Issue               | Solution                                   |
-| ------------------- | ------------------------------------------ |
-| Can't login         | Verify email/password from list above      |
-| No courses showing  | Try different filter or "Clear Filters"    |
-| No admin dashboard  | Ensure logged in as admin@careerfinder.com |
-| Data not loading    | Clear browser cache and refresh            |
-| 403 Firestore error | Verify Firebase rules are deployed         |
+| Issue               | Solution                                  |
+| ------------------- | ----------------------------------------- |
+| Can't login         | Verify email/password from list above     |
+| No courses showing  | Try different filter or "Clear Filters"   |
+| No admin dashboard  | Ensure logged in as admin@careerfindr.com |
+| Data not loading    | Clear browser cache and refresh           |
+| 403 Firestore error | Verify Firebase rules are deployed        |
 
 ## Next Steps
 

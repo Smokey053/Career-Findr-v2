@@ -108,20 +108,6 @@ export const authAPI = {
    */
   getCurrentUser: () => checkBackend().then(() => api.get("/auth/me")),
   /**
-   * Verifies a user's email address.
-   * @param {string} token - The email verification token.
-   * @returns {Promise<object>}
-   */
-  verifyEmail: (token) =>
-    checkBackend().then(() => api.get(`/auth/verify-email?token=${token}`)),
-  /**
-   * Resends the email verification link.
-   * @param {string} email - The user's email address.
-   * @returns {Promise<object>}
-   */
-  resendVerification: (email) =>
-    checkBackend().then(() => api.post("/auth/resend-verification", { email })),
-  /**
    * Initiates the password reset process.
    * @param {string} email - The user's email address.
    * @returns {Promise<object>}

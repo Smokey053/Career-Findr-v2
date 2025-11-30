@@ -12,18 +12,27 @@ import {
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import { searchJobs as algoliaSearchJobs, isAlgoliaConfigured } from "./algoliaService";
+
+// Helper function to remove undefined values from an object
+const removeUndefined = (obj) => {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined)
+  );
+};
 
 // Create a new job
-export const createJob = async (jobData, companyId) => {
+export const createJob = async (jobData, companyId, companyName) => {
   try {
     const jobsRef = collection(db, "jobs");
-    const newJob = {
+    const newJob = removeUndefined({
       ...jobData,
       companyId,
+      companyName: companyName || jobData.companyName || null,
       status: jobData.status || "active",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    };
+    });
 
     const docRef = await addDoc(jobsRef, newJob);
     return { id: docRef.id, ...newJob };
@@ -37,10 +46,10 @@ export const createJob = async (jobData, companyId) => {
 export const updateJob = async (jobId, jobData) => {
   try {
     const jobRef = doc(db, "jobs", jobId);
-    const updatedData = {
+    const updatedData = removeUndefined({
       ...jobData,
       updatedAt: serverTimestamp(),
-    };
+    });
 
     await updateDoc(jobRef, updatedData);
     return { id: jobId, ...updatedData };
@@ -122,8 +131,23 @@ export const getAllJobs = async (filters = {}) => {
 };
 
 // Search jobs
-export const searchJobs = async (filters = {}) => {
+export const searchJobs = async (filters = {}, page = 0, pageSize = 20) => {
   try {
+    // Try Algolia first if configured
+    if (isAlgoliaConfigured()) {
+      const algoliaResults = await algoliaSearchJobs(filters.search || '', filters, page, pageSize);
+      if (!algoliaResults.fallback && !algoliaResults.error) {
+        return {
+          jobs: algoliaResults.hits,
+          totalCount: algoliaResults.nbHits,
+          totalPages: algoliaResults.nbPages,
+          currentPage: algoliaResults.page,
+          source: 'algolia',
+        };
+      }
+    }
+
+    // Fallback to Firebase
     const jobsRef = collection(db, "jobs");
     const constraints = [where("status", "==", "active")];
 
@@ -143,24 +167,28 @@ export const searchJobs = async (filters = {}) => {
     const q = query(jobsRef, ...constraints);
 
     const querySnapshot = await getDocs(q);
-    const jobs = [];
+    let jobs = [];
     querySnapshot.forEach((doc) => {
-      const jobData = { id: doc.id, ...doc.data() };
-      // Client-side search filter for title/description
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        if (
-          jobData.title?.toLowerCase().includes(searchLower) ||
-          jobData.description?.toLowerCase().includes(searchLower)
-        ) {
-          jobs.push(jobData);
-        }
-      } else {
-        jobs.push(jobData);
-      }
+      jobs.push({ id: doc.id, ...doc.data() });
     });
 
-    return jobs;
+    // Client-side search filter for title/description
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      jobs = jobs.filter(job =>
+        job.title?.toLowerCase().includes(searchLower) ||
+        job.description?.toLowerCase().includes(searchLower) ||
+        job.companyName?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return {
+      jobs,
+      totalCount: jobs.length,
+      totalPages: Math.ceil(jobs.length / pageSize),
+      currentPage: page,
+      source: 'firebase',
+    };
   } catch (error) {
     console.error("Error searching jobs:", error);
     throw error;

@@ -38,7 +38,7 @@ export const registerUser = async (req, res, next) => {
       email: email,
       role: role,
       isVerified: false,
-      isApproved: role === "student" ? true : false, // Students auto-approved, others need admin approval
+      isApproved: true, // All accounts auto-approved, only email verification required
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       profile: {
@@ -108,63 +108,36 @@ export const loginUser = async (req, res, next) => {
       });
     }
 
-    const { email, password, idToken } = req.body;
+    const { idToken } = req.body;
 
-    let userData;
-
-    // If idToken provided (Firebase Auth from frontend)
-    if (idToken) {
-      const decodedToken = await auth.verifyIdToken(idToken);
-      const userDoc = await db.collection("users").doc(decodedToken.uid).get();
-
-      if (!userDoc.exists) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found in database",
-        });
-      }
-
-      userData = { userId: decodedToken.uid, ...userDoc.data() };
-    } else {
-      // Email/password login (search by email)
-      const usersSnapshot = await db
-        .collection("users")
-        .where("email", "==", email)
-        .limit(1)
-        .get();
-
-      if (usersSnapshot.empty) {
-        return res.status(401).json({
-          success: false,
-          message: "Invalid email or password",
-        });
-      }
-
-      const userDoc = usersSnapshot.docs[0];
-      userData = userDoc.data();
-
-      // Note: In production, verify password with Firebase Auth client SDK
-      // Backend should validate the Firebase ID token instead
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Firebase ID token is required. Authenticate with the client SDK and send the token to continue.",
+      });
     }
 
+    const decodedToken = await auth.verifyIdToken(idToken);
+    const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in database",
+      });
+    }
+
+    const userData = { userId: decodedToken.uid, ...userDoc.data() };
+
     // Check if email is verified
-    if (!userData.isVerified) {
+    const emailVerified =
+      userData.isVerified || decodedToken.email_verified === true;
+    if (!emailVerified) {
       return res.status(401).json({
         success: false,
         message:
           "Please verify your email before logging in. Check your inbox for verification link.",
-      });
-    }
-
-    // Check approval status for companies/institutes
-    if (
-      (userData.role === "company" || userData.role === "institute") &&
-      !userData.isApproved
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Your account is pending admin approval. You will receive an email once approved.",
       });
     }
 
@@ -187,7 +160,7 @@ export const loginUser = async (req, res, next) => {
         uid: userData.userId,
         email: userData.email,
         role: userData.role,
-        isVerified: userData.isVerified,
+        isVerified: emailVerified,
         isApproved: userData.isApproved,
         profile: userData.profile,
       },
